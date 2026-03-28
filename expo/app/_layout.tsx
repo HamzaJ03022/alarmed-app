@@ -8,7 +8,7 @@ import { colors } from "@/constants/colors";
 import * as Notifications from 'expo-notifications';
 import { useAlarmStore } from "@/store/alarm-store";
 
-
+import { ErrorBoundary } from "./error-boundary";
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -93,12 +93,12 @@ export default function RootLayout() {
   }
 
   return (
-    
+    <ErrorBoundary>
       <>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <RootLayoutNav />
       </>
-    
+    </ErrorBoundary>
   );
 }
 
