@@ -7,11 +7,13 @@ import AlarmItem from '@/components/AlarmItem';
 import EmptyState from '@/components/EmptyState';
 import { colors } from '@/constants/colors';
 import { shouldRingToday } from '@/utils/time';
+import { cancelAlarmNotifications } from '@/utils/notifications';
 
 export default function AlarmsScreen() {
   const router = useRouter();
   const alarms = useAlarmStore(state => state.alarms);
   const setActiveAlarm = useAlarmStore(state => state.setActiveAlarm);
+  const updateAlarm = useAlarmStore(state => state.updateAlarm);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   const activeAlarms = useMemo(() => {
@@ -26,20 +28,24 @@ export default function AlarmsScreen() {
       const alarmTime = alarm.time;
       
       if (alarmTime === currentTime && shouldRingToday(alarm.repeatDays)) {
-        console.log('Alarm triggered:', alarm.id, alarmTime);
         setActiveAlarm(alarm.id);
+        // Auto-disable one-time alarms after ringing
+        if (alarm.repeatDays.length === 0) {
+          updateAlarm(alarm.id, { isActive: false });
+          cancelAlarmNotifications(alarm.id);
+        }
         router.push('/alarm-ringing');
         break;
       }
     }
-  }, [activeAlarms, setActiveAlarm, router]);
+  }, [activeAlarms, setActiveAlarm, router, updateAlarm]);
   
   useEffect(() => {
     checkAlarms();
     
     intervalRef.current = setInterval(() => {
       checkAlarms();
-    }, 10000);
+    }, 5000);
     
     return () => {
       if (intervalRef.current) {

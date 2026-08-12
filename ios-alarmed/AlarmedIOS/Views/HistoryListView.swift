@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HistoryListView: View {
     @Environment(AlarmsViewModel.self) private var viewModel
+    @State private var showCreateAlarm = false
 
     private var sortedHistory: [AlarmHistory] {
         viewModel.history.sorted {
@@ -24,7 +25,9 @@ struct HistoryListView: View {
                         description: "Your alarm history will appear here once you've used your alarms.",
                         actionText: "Create Alarm",
                         systemImage: "chart.bar.fill"
-                    ) {}
+                    ) {
+                        showCreateAlarm = true
+                    }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
@@ -41,6 +44,9 @@ struct HistoryListView: View {
             }
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.large)
+            .sheet(isPresented: $showCreateAlarm) {
+                CreateAlarmView()
+            }
         }
     }
 }

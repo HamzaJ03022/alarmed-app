@@ -1,12 +1,13 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
 import { Platform, StatusBar, AppState } from "react-native";
 import { colors } from "@/constants/colors";
 import * as Notifications from 'expo-notifications';
 import { useAlarmStore } from "@/store/alarm-store";
+import { rescheduleAllAlarms } from "@/utils/notifications";
 
 
 
@@ -33,14 +34,31 @@ export default function RootLayout() {
   });
   const appState = useRef(AppState.currentState);
   const alarms = useAlarmStore((state) => state.alarms);
+  const setActiveAlarm = useAlarmStore((state) => state.setActiveAlarm);
+  const router = useRouter();
 
   useEffect(() => {
     const requestPermissions = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
       console.log('Notification permission status:', status);
+      if (status === 'granted') {
+        await rescheduleAllAlarms(alarms);
+      }
     };
     requestPermissions();
   }, []);
+
+  // Handle notification tap - navigate to alarm ringing screen
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const alarmId = response.notification.request.content.data?.alarmId as string | undefined;
+      if (alarmId) {
+        setActiveAlarm(alarmId);
+        router.push('/alarm-ringing');
+      }
+    });
+    return () => subscription.remove();
+  }, [router, setActiveAlarm]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
@@ -144,6 +162,13 @@ function RootLayoutNav() {
         name="quotes" 
         options={{ 
           title: "Motivational Quotes",
+          presentation: Platform.OS === 'ios' ? 'modal' : 'card',
+        }} 
+      />
+      <Stack.Screen 
+        name="privacy-policy" 
+        options={{ 
+          title: "Privacy Policy",
           presentation: Platform.OS === 'ios' ? 'modal' : 'card',
         }} 
       />

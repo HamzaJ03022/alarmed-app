@@ -75,7 +75,9 @@ function AlarmItem({ alarm }: AlarmItemProps) {
               styles.challenge, 
               !alarm.isActive && styles.inactiveText
             ]}>
-              {alarm.questionCount} {alarm.questionCount === 1 ? 'question' : 'questions'} • {alarm.questionDifficulty}
+              {alarm.dismissalMode === 'phrase' 
+                ? 'Type a phrase'
+                : `${alarm.questionCount} ${alarm.questionCount === 1 ? 'question' : 'questions'} • ${alarm.questionDifficulty}`}
             </Text>
           </View>
         </View>

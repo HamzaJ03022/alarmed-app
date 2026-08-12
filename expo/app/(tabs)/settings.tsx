@@ -1,15 +1,17 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Trash2, Volume2, Vibrate, HelpCircle, Info, Quote, VolumeX, AlertTriangle } from 'lucide-react-native';
+import { Trash2, Volume2, Vibrate, HelpCircle, Info, Quote, VolumeX, AlertTriangle, FileText } from 'lucide-react-native';
 import Slider from '@react-native-community/slider';
 import { colors } from '@/constants/colors';
 import { useAlarmStore } from '@/store/alarm-store';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+  const soundEnabled = useAlarmStore(state => state.soundEnabled);
+  const vibrationEnabled = useAlarmStore(state => state.vibrationEnabled);
+  const setSoundEnabled = useAlarmStore(state => state.setSoundEnabled);
+  const setVibrationEnabled = useAlarmStore(state => state.setVibrationEnabled);
   const clearHistory = useAlarmStore(state => state.clearHistory);
   const clearAlarms = useAlarmStore(state => state.clearAlarms);
   const quotes = useAlarmStore(state => state.quotes);
@@ -173,6 +175,16 @@ export default function SettingsScreen() {
           <View style={styles.buttonTextContainer}>
             <Text style={styles.buttonText}>Motivational Quotes</Text>
             <Text style={styles.buttonSubtext}>{quotes.length} quotes</Text>
+          </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={() => router.push('/privacy-policy')}
+        >
+          <FileText size={20} color={colors.textSecondary} style={styles.buttonIcon} />
+          <View style={styles.buttonTextContainer}>
+            <Text style={styles.buttonText}>Privacy Policy</Text>
           </View>
         </TouchableOpacity>
       </View>

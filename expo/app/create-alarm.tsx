@@ -14,6 +14,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
 import { formatTimeFromDate } from '@/utils/time';
+import { scheduleAlarmNotification } from '@/utils/notifications';
 import { RepeatDay, QuestionDifficulty, QuestionCategory, DismissalMode } from '@/types/alarm';
 
 export default function CreateAlarmScreen() {
@@ -63,7 +64,23 @@ export default function CreateAlarmScreen() {
   const handleSave = () => {
     const time = formatTimeFromDate(date);
     
-    addAlarm({
+    const alarmId = addAlarm({
+      time,
+      label,
+      isActive: true,
+      repeatDays,
+      questionCount,
+      questionDifficulty,
+      questionCategories,
+      sound: 'default',
+      vibrate: true,
+      dismissalMode,
+      dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '',
+    });
+    
+    // Schedule OS notification for the alarm
+    scheduleAlarmNotification({
+      id: alarmId,
       time,
       label,
       isActive: true,

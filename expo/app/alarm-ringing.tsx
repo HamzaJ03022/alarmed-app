@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Vibration } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
+import { Asset } from 'expo-asset';
 import * as Haptics from 'expo-haptics';
 import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
@@ -21,6 +22,8 @@ export default function AlarmRingingScreen() {
   const quotes = useAlarmStore(state => state.quotes);
   const volume = useAlarmStore(state => state.volume);
   const crescendoEnabled = useAlarmStore(state => state.crescendoEnabled);
+  const soundEnabled = useAlarmStore(state => state.soundEnabled);
+  const vibrationEnabled = useAlarmStore(state => state.vibrationEnabled);
   
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -91,22 +94,16 @@ export default function AlarmRingingScreen() {
     
     // Play alarm sound - wait a bit for audio mode to be set
     async function playSound() {
+      if (!soundEnabled) return;
       try {
-        console.log('=== Starting alarm sound setup ===');
-        console.log('Platform:', Platform.OS);
-        console.log('Initial volume:', crescendoEnabled ? 0.3 : volume);
-        console.log('Crescendo enabled:', crescendoEnabled);
-        
-        // Wait a bit to ensure audio mode is set
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Use alarm sound from URL
-        const soundSource = { uri: 'https://cdn.pixabay.com/download/audio/2024/09/23/audio_6215507008.mp3?filename=lo-fi-alarm-clock-243766.mp3' };
-        
-        console.log('Loading sound from local file');
+        // Load local alarm sound from bundled assets
+        const asset = Asset.fromModule(require('@/assets/alarm.mp3'));
+        await asset.downloadAsync();
         
         const { sound: newSound } = await Audio.Sound.createAsync(
-          soundSource,
+          { uri: asset.localUri || asset.uri },
           { 
             shouldPlay: false, 
             isLooping: true, 
@@ -115,62 +112,37 @@ export default function AlarmRingingScreen() {
           },
           (status) => {
             if (status.isLoaded) {
-              console.log('🔊 Sound callback - isPlaying:', status.isPlaying, 'volume:', status.volume);
               setIsPlaying(status.isPlaying);
             } else if (!status.isLoaded && 'error' in status) {
-              console.error('❌ Sound playback error in callback:', status.error);
               setSoundError('Playback error: ' + status.error);
             }
           }
         );
         
-        // Check if sound loaded
         const loadStatus = await newSound.getStatusAsync();
         if (!loadStatus.isLoaded) {
-          console.error('❌ Sound failed to load');
           setSoundError('Sound failed to load');
           return;
         }
         
-        console.log('✓ Sound loaded successfully');
         setSoundLoaded(true);
         setSound(newSound);
         setSoundError('');
         
-        // CRITICAL: Play the sound and wait for confirmation
-        console.log('▶️ Starting playback...');
         await newSound.playAsync();
         
-        // Wait a moment for playback to start
         await new Promise(resolve => setTimeout(resolve, 200));
         
-        // Verify playback started
         const playStatus = await newSound.getStatusAsync();
         if (playStatus.isLoaded) {
-          console.log('📊 Final playback status:', {
-            isPlaying: playStatus.isPlaying,
-            positionMillis: playStatus.positionMillis,
-            durationMillis: playStatus.durationMillis,
-            volume: playStatus.volume,
-            isLooping: playStatus.isLooping,
-            isMuted: playStatus.isMuted,
-          });
-          
           if (playStatus.isPlaying) {
-            console.log('✅ SOUND IS CONFIRMED PLAYING!');
             setIsPlaying(true);
           } else {
-            console.error('⚠️ Sound loaded but NOT playing');
-            setSoundError('Sound loaded but not playing');
-            // Try playing again
-            console.log('Attempting to play again...');
             await newSound.playAsync();
           }
         }
         
-        // If crescendo is enabled, gradually increase volume
         if (crescendoEnabled) {
-          console.log('Starting crescendo effect...');
           let vol = 0.5;
           volumeIntervalRef.current = setInterval(async () => {
             if (vol < volume && newSound) {
@@ -178,27 +150,23 @@ export default function AlarmRingingScreen() {
               setCurrentVolume(vol);
               try {
                 await newSound.setVolumeAsync(vol);
-                console.log('Crescendo volume:', vol);
               } catch (err) {
-                console.log('Error setting volume:', err);
+                // volume update failed, continue
               }
             } else {
               if (volumeIntervalRef.current) {
                 clearInterval(volumeIntervalRef.current);
-                console.log('Crescendo complete');
               }
             }
           }, 1000);
         }
       } catch (error) {
-        console.error('❌ CRITICAL ERROR playing sound:', error);
-        console.error('Error stack:', (error as Error).stack);
-        setSoundError('Critical error: ' + (error as Error).message);
+        setSoundError('Failed to play alarm sound: ' + (error as Error).message);
       }
     }
     
     // Start vibration pattern
-    if (alarm.vibrate && Platform.OS !== 'web') {
+    if (alarm.vibrate && vibrationEnabled && Platform.OS !== 'web') {
       const PATTERN = [1000, 2000, 3000];
       Vibration.vibrate(PATTERN, true);
     }
@@ -218,7 +186,7 @@ export default function AlarmRingingScreen() {
         clearInterval(volumeIntervalRef.current);
       }
     };
-  }, [alarm, router, quotes, volume, crescendoEnabled]);
+  }, [alarm, router, quotes, volume, crescendoEnabled, soundEnabled, vibrationEnabled]);
   
   useEffect(() => {
     return () => {
@@ -233,8 +201,6 @@ export default function AlarmRingingScreen() {
   }, [sound]);
   
   const handleAnswer = useCallback((isCorrect: boolean) => {
-    console.log('handleAnswer called with isCorrect:', isCorrect);
-    
     if (Platform.OS !== 'web') {
       if (isCorrect) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -246,11 +212,8 @@ export default function AlarmRingingScreen() {
     if (isCorrect) {
       setCorrectAnswers(prevCorrect => {
         const newCorrectCount = prevCorrect + 1;
-        console.log('✓ Correct answer! Count:', newCorrectCount, '/', alarm?.questionCount);
         
         if (alarm && newCorrectCount >= alarm.questionCount) {
-          console.log('✅ Required correct answers reached! Stopping alarm...');
-          
           if (sound) {
             sound.stopAsync().catch(err => console.log('Error stopping sound:', err));
           }
@@ -263,14 +226,12 @@ export default function AlarmRingingScreen() {
           
           setCompleted(true);
         } else {
-          console.log('Moving to next question...');
           setCurrentQuestionIndex(prev => prev + 1);
         }
         
         return newCorrectCount;
       });
     } else {
-      console.log('✗ Wrong answer. Keep trying...');
       setCurrentQuestionIndex(prev => prev + 1);
     }
   }, [alarm, sound]);

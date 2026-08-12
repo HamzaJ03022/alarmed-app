@@ -15,6 +15,8 @@ final class AlarmsViewModel {
     ]
     var volume: Double = 1.0
     var crescendoEnabled: Bool = false
+    var soundEnabled: Bool = true
+    var vibrationEnabled: Bool = true
 
     private let storage = UserDefaults.standard
 
@@ -113,6 +115,8 @@ final class AlarmsViewModel {
     private let quotesKey = "alarmed_quotes"
     private let volumeKey = "alarmed_volume"
     private let crescendoKey = "alarmed_crescendo"
+    private let soundEnabledKey = "alarmed_sound_enabled"
+    private let vibrationEnabledKey = "alarmed_vibration_enabled"
 
     private func save() {
         if let data = try? JSONEncoder().encode(alarms) {
@@ -124,6 +128,8 @@ final class AlarmsViewModel {
         storage.set(quotes, forKey: quotesKey)
         storage.set(volume, forKey: volumeKey)
         storage.set(crescendoEnabled, forKey: crescendoKey)
+        storage.set(soundEnabled, forKey: soundEnabledKey)
+        storage.set(vibrationEnabled, forKey: vibrationEnabledKey)
     }
 
     private func load() {
@@ -141,6 +147,8 @@ final class AlarmsViewModel {
         volume = storage.double(forKey: volumeKey)
         if storage.object(forKey: volumeKey) == nil { volume = 1.0 }
         crescendoEnabled = storage.bool(forKey: crescendoKey)
+        soundEnabled = storage.object(forKey: soundEnabledKey) == nil ? true : storage.bool(forKey: soundEnabledKey)
+        vibrationEnabled = storage.object(forKey: vibrationEnabledKey) == nil ? true : storage.bool(forKey: vibrationEnabledKey)
     }
 
     // MARK: - Native Alarm Scheduling

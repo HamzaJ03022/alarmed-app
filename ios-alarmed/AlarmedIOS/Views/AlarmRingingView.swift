@@ -133,10 +133,12 @@ struct AlarmRingingView: View {
         let quotes = viewModel.quotes
         selectedQuote = quotes.randomElement() ?? "Rise and shine! Today is full of possibilities."
 
-        AudioManager.shared.playAlarm(
-            volume: viewModel.volume,
-            crescendo: viewModel.crescendoEnabled
-        )
+        if viewModel.soundEnabled {
+            AudioManager.shared.playAlarm(
+                volume: viewModel.volume,
+                crescendo: viewModel.crescendoEnabled
+            )
+        }
 
         if viewModel.crescendoEnabled {
             startCrescendoMonitor()

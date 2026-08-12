@@ -15,6 +15,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
 import { formatTimeFromDate } from '@/utils/time';
+import { scheduleAlarmNotification, cancelAlarmNotifications } from '@/utils/notifications';
 import DaySelector from '@/components/DaySelector';
 import { RepeatDay, QuestionDifficulty, QuestionCategory, DismissalMode } from '@/types/alarm';
 import { Trash2, Quote } from 'lucide-react-native';
@@ -131,6 +132,10 @@ export default function EditAlarmScreen() {
       dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '',
     });
     
+    // Re-schedule OS notification with updated settings
+    const updatedAlarm = { ...alarm, time, label, repeatDays, questionCount, questionDifficulty, questionCategories, vibrate, dismissalMode, dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '' };
+    scheduleAlarmNotification(updatedAlarm);
+    
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -150,6 +155,7 @@ export default function EditAlarmScreen() {
           text: 'Delete', 
           style: 'destructive',
           onPress: () => {
+            cancelAlarmNotifications(alarm.id);
             deleteAlarm(alarm.id);
             router.push('/');
           }

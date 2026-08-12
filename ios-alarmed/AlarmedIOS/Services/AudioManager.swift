@@ -14,7 +14,7 @@ final class AudioManager: @unchecked Sendable {
             try AVAudioSession.sharedInstance().setCategory(
                 .playback,
                 mode: .default,
-                options: [.mixWithOthers]
+                options: []
             )
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {

@@ -2,8 +2,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AlarmsViewModel.self) private var viewModel
-    @State private var soundEnabled = true
-    @State private var vibrationEnabled = true
     @State private var showClearHistoryAlert = false
     @State private var showClearAlarmsAlert = false
     @State private var showQuotes = false
@@ -71,7 +69,10 @@ struct SettingsView: View {
             settingToggle(
                 icon: "speaker.wave.2.fill",
                 title: "Sound",
-                isOn: $soundEnabled
+                isOn: Binding(
+                    get: { viewModel.soundEnabled },
+                    set: { viewModel.soundEnabled = $0 }
+                )
             )
 
             VStack(spacing: 12) {
@@ -119,7 +120,10 @@ struct SettingsView: View {
             settingToggle(
                 icon: "waveform.path",
                 title: "Vibration",
-                isOn: $vibrationEnabled
+                isOn: Binding(
+                    get: { viewModel.vibrationEnabled },
+                    set: { viewModel.vibrationEnabled = $0 }
+                )
             )
 
             navigationButton(

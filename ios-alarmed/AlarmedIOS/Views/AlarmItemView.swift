@@ -45,7 +45,9 @@ struct AlarmItemView: View {
                                     .foregroundStyle(AppColors.primary)
                             }
                         }
-                        Text("\(alarm.questionCount) \(alarm.questionCount == 1 ? "question" : "questions") \u{2022} \(alarm.questionDifficulty)")
+                        Text(alarm.dismissalMode == "phrase"
+                             ? "Type a phrase"
+                             : "\(alarm.questionCount) \(alarm.questionCount == 1 ? "question" : "questions") \u{2022} \(alarm.questionDifficulty)")
                             .font(.caption)
                             .foregroundStyle(alarm.isActive ? AppColors.textSecondary : AppColors.inactive)
                     }

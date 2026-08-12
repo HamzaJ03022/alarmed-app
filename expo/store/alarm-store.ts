@@ -10,6 +10,8 @@ interface AlarmState {
   quotes: string[];
   volume: number;
   crescendoEnabled: boolean;
+  soundEnabled: boolean;
+  vibrationEnabled: boolean;
   addAlarm: (alarm: Omit<Alarm, 'id'>) => string;
   updateAlarm: (id: string, alarm: Partial<Alarm>) => void;
   deleteAlarm: (id: string) => void;
@@ -24,6 +26,8 @@ interface AlarmState {
   deleteQuote: (index: number) => void;
   setVolume: (volume: number) => void;
   setCrescendoEnabled: (enabled: boolean) => void;
+  setSoundEnabled: (enabled: boolean) => void;
+  setVibrationEnabled: (enabled: boolean) => void;
 }
 
 export const useAlarmStore = create<AlarmState>()(
@@ -41,6 +45,8 @@ export const useAlarmStore = create<AlarmState>()(
       ],
       volume: 1.0, // Maximum volume by default
       crescendoEnabled: false, // Crescendo disabled by default
+      soundEnabled: true,
+      vibrationEnabled: true,
       
       addAlarm: (alarm) => {
         const id = Date.now().toString();
@@ -165,10 +171,36 @@ export const useAlarmStore = create<AlarmState>()(
       setCrescendoEnabled: (crescendoEnabled) => {
         set({ crescendoEnabled });
       },
+      
+      setSoundEnabled: (soundEnabled) => {
+        set({ soundEnabled });
+      },
+      
+      setVibrationEnabled: (vibrationEnabled) => {
+        set({ vibrationEnabled });
+      },
     }),
     {
       name: 'alarmed-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as Record<string, unknown> | undefined;
+        if (!state) return state as never;
+        // v1 -> v2: add dismissalMode/dismissPhrase to all alarms, plus soundEnabled/vibrationEnabled
+        if (version < 2) {
+          if (Array.isArray(state.alarms)) {
+            state.alarms = (state.alarms as Alarm[]).map((alarm) => ({
+              ...alarm,
+              dismissalMode: (alarm as unknown as Record<string, unknown>).dismissalMode ?? 'questions',
+              dismissPhrase: (alarm as unknown as Record<string, unknown>).dismissPhrase ?? '',
+            }));
+          }
+          if (state.soundEnabled === undefined) state.soundEnabled = true;
+          if (state.vibrationEnabled === undefined) state.vibrationEnabled = true;
+        }
+        return state as never;
+      },
     }
   )
 );
