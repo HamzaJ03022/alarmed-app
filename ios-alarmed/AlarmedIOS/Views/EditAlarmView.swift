@@ -12,6 +12,8 @@ struct EditAlarmView: View {
     @State private var difficulty: String
     @State private var categories: [String]
     @State private var vibrate: Bool
+    @State private var dismissalMode: String
+    @State private var dismissPhrase: String
 
     @State private var showDeleteConfirm = false
 
@@ -40,6 +42,8 @@ struct EditAlarmView: View {
         _difficulty = State(initialValue: alarm.questionDifficulty)
         _categories = State(initialValue: alarm.questionCategories)
         _vibrate = State(initialValue: alarm.vibrate)
+        _dismissalMode = State(initialValue: alarm.dismissalMode)
+        _dismissPhrase = State(initialValue: alarm.dismissPhrase)
     }
 
     var body: some View {
@@ -165,6 +169,47 @@ struct EditAlarmView: View {
                 .foregroundStyle(AppColors.text)
 
             VStack(alignment: .leading, spacing: 12) {
+                Text("Dismissal Method")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppColors.textSecondary)
+                    .textCase(.uppercase)
+                HStack(spacing: 10) {
+                    ForEach(["questions", "phrase"], id: \.self) { mode in
+                        Button {
+                            dismissalMode = mode
+                        } label: {
+                            Text(mode == "questions" ? "Questions" : "Type a Phrase")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(
+                                    dismissalMode == mode ? AppColors.text : AppColors.textSecondary
+                                )
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(
+                                    dismissalMode == mode
+                                        ? AppColors.primary
+                                        : AppColors.inputBackground,
+                                    in: RoundedRectangle(cornerRadius: 12)
+                                )
+                        }
+                    }
+                }
+            }
+
+            if dismissalMode == "questions" {
+                questionsSection
+            } else {
+                phraseSection
+            }
+        }
+        .padding(24)
+        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
+        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
+    }
+
+    private var questionsSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Number of Questions")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppColors.textSecondary)
@@ -255,9 +300,53 @@ struct EditAlarmView: View {
                 }
             }
         }
-        .padding(24)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
+    }
+
+    private var phraseSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Dismissal Phrase")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppColors.textSecondary)
+                .textCase(.uppercase)
+
+            TextEditor(text: $dismissPhrase)
+                .font(.body)
+                .foregroundStyle(AppColors.text)
+                .frame(minHeight: 80)
+                .padding(12)
+                .background(AppColors.inputBackground, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(alignment: .topLeading) {
+                    if dismissPhrase.isEmpty {
+                        Text("e.g. I want to wake up so I can get to work on time and not be late")
+                            .font(.body)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .padding(.leading, 16)
+                            .padding(.top, 16)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .onChange(of: dismissPhrase) { _, newValue in
+                    if newValue.count > 100 {
+                        dismissPhrase = String(newValue.prefix(100))
+                    }
+                }
+
+            Text("\(dismissPhrase.count)/100")
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+
+            if !dismissPhrase.isEmpty && dismissPhrase.count < 10 {
+                Text("Phrase must be at least 10 characters")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.error)
+            }
+
+            Text("You'll need to type this phrase exactly (case-sensitive) to dismiss the alarm.")
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .lineSpacing(2)
+        }
     }
 
     private var actionButtons: some View {
@@ -287,9 +376,17 @@ struct EditAlarmView: View {
                     .foregroundStyle(AppColors.text)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
-                    .background(AppColors.primary, in: RoundedRectangle(cornerRadius: 16))
+                    .background(
+                        phraseIsValid ? AppColors.primary : AppColors.primary.opacity(0.5),
+                        in: RoundedRectangle(cornerRadius: 16)
+                    )
             }
+            .disabled(!phraseIsValid)
         }
+    }
+
+    private var phraseIsValid: Bool {
+        dismissalMode == "questions" || dismissPhrase.count >= 10
     }
 
     private func saveChanges() {
@@ -301,7 +398,9 @@ struct EditAlarmView: View {
             questionCount: questionCount,
             questionDifficulty: difficulty,
             questionCategories: categories,
-            vibrate: vibrate
+            vibrate: vibrate,
+            dismissalMode: dismissalMode,
+            dismissPhrase: dismissalMode == "phrase" ? dismissPhrase : ""
         ))
         dismiss()
     }

@@ -3,6 +3,7 @@ import Foundation
 typealias RepeatDay = String
 typealias QuestionDifficulty = String
 typealias QuestionCategory = String
+typealias DismissalMode = String
 
 struct Alarm: Identifiable, Codable, Equatable {
     var id: String
@@ -14,6 +15,8 @@ struct Alarm: Identifiable, Codable, Equatable {
     var questionDifficulty: QuestionDifficulty
     var questionCategories: [QuestionCategory]
     var vibrate: Bool
+    var dismissalMode: DismissalMode
+    var dismissPhrase: String
 
     init(
         id: String = UUID().uuidString,
@@ -24,7 +27,9 @@ struct Alarm: Identifiable, Codable, Equatable {
         questionCount: Int = 3,
         questionDifficulty: QuestionDifficulty = "medium",
         questionCategories: [QuestionCategory] = ["math", "general", "puzzle"],
-        vibrate: Bool = true
+        vibrate: Bool = true,
+        dismissalMode: DismissalMode = "questions",
+        dismissPhrase: String = ""
     ) {
         self.id = id
         self.time = time
@@ -35,5 +40,7 @@ struct Alarm: Identifiable, Codable, Equatable {
         self.questionDifficulty = questionDifficulty
         self.questionCategories = questionCategories
         self.vibrate = vibrate
+        self.dismissalMode = dismissalMode
+        self.dismissPhrase = dismissPhrase
     }
 }

@@ -4,6 +4,8 @@ export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 
 export type QuestionCategory = 'math' | 'general' | 'puzzle';
 
+export type DismissalMode = 'questions' | 'phrase';
+
 export interface Alarm {
   id: string;
   time: string; // Format: "HH:MM"
@@ -15,6 +17,8 @@ export interface Alarm {
   questionCategories: QuestionCategory[];
   sound: string;
   vibrate: boolean;
+  dismissalMode: DismissalMode;
+  dismissPhrase: string;
 }
 
 export interface AlarmHistory {

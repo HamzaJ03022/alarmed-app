@@ -16,7 +16,7 @@ import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
 import { formatTimeFromDate } from '@/utils/time';
 import DaySelector from '@/components/DaySelector';
-import { RepeatDay, QuestionDifficulty, QuestionCategory } from '@/types/alarm';
+import { RepeatDay, QuestionDifficulty, QuestionCategory, DismissalMode } from '@/types/alarm';
 import { Trash2, Quote } from 'lucide-react-native';
 
 export default function EditAlarmScreen() {
@@ -51,6 +51,10 @@ export default function EditAlarmScreen() {
     alarm?.questionCategories || ['math', 'general', 'puzzle']
   );
   const [vibrate, setVibrate] = useState(alarm?.vibrate ?? true);
+  const [dismissalMode, setDismissalMode] = useState<DismissalMode>(
+    (alarm?.dismissalMode as DismissalMode) || 'questions'
+  );
+  const [dismissPhrase, setDismissPhrase] = useState(alarm?.dismissPhrase || '');
   const [newQuote, setNewQuote] = useState('');
   const [showQuoteInput, setShowQuoteInput] = useState(false);
   
@@ -123,6 +127,8 @@ export default function EditAlarmScreen() {
       questionDifficulty,
       questionCategories,
       vibrate,
+      dismissalMode,
+      dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '',
     });
     
     if (router.canGoBack()) {
@@ -247,6 +253,33 @@ export default function EditAlarmScreen() {
         <Text style={styles.sectionTitle}>Wake-Up Challenge</Text>
         
         <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Dismissal Method</Text>
+          <View style={styles.segmentedControl}>
+            {(['questions', 'phrase'] as DismissalMode[]).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                style={[
+                  styles.segmentButton,
+                  dismissalMode === mode && styles.segmentButtonActive,
+                ]}
+                onPress={() => setDismissalMode(mode)}
+              >
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    dismissalMode === mode && styles.segmentButtonTextActive,
+                  ]}
+                >
+                  {mode === 'questions' ? 'Questions' : 'Type a Phrase'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        
+        {dismissalMode === 'questions' ? (
+          <>
+          <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Number of Questions</Text>
           <View style={styles.counterContainer}>
             <TouchableOpacity
@@ -321,6 +354,30 @@ export default function EditAlarmScreen() {
             ))}
           </View>
         </View>
+          </>
+        ) : (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Dismissal Phrase</Text>
+            <TextInput
+              style={styles.phraseInput}
+              value={dismissPhrase}
+              onChangeText={setDismissPhrase}
+              placeholder="e.g. I want to wake up so I can get to work on time and not be late"
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              maxLength={100}
+              autoCapitalize="sentences"
+              autoCorrect={false}
+            />
+            <Text style={styles.phraseCharCounter}>{dismissPhrase.length}/100</Text>
+            {dismissPhrase.length > 0 && dismissPhrase.length < 10 && (
+              <Text style={styles.phraseValidationText}>Phrase must be at least 10 characters</Text>
+            )}
+            <Text style={styles.phraseHelperText}>
+              You'll need to type this phrase exactly (case-sensitive) to dismiss the alarm.
+            </Text>
+          </View>
+        )}
       </View>
       
       <View style={styles.formSection}>
@@ -395,8 +452,13 @@ export default function EditAlarmScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.button, styles.saveButton]} 
+          style={[
+            styles.button, 
+            styles.saveButton,
+            dismissalMode === 'phrase' && dismissPhrase.length < 10 && styles.disabledButton,
+          ]} 
           onPress={handleSave}
+          disabled={dismissalMode === 'phrase' && dismissPhrase.length < 10}
         >
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
@@ -605,6 +667,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+  phraseInput: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 16,
+    color: colors.text,
+    minHeight: 80,
+    textAlignVertical: 'top' as const,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+  },
+  phraseCharCounter: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'right' as const,
+    marginTop: 4,
+  },
+  phraseValidationText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 4,
+  },
+  phraseHelperText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 8,
+    lineHeight: 18,
   },
   quoteInputContainer: {
     marginBottom: 8,

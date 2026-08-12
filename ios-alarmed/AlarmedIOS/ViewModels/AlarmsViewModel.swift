@@ -39,6 +39,8 @@ final class AlarmsViewModel {
         if let difficulty = updates.questionDifficulty { alarm.questionDifficulty = difficulty }
         if let categories = updates.questionCategories { alarm.questionCategories = categories }
         if let vibrate = updates.vibrate { alarm.vibrate = vibrate }
+        if let dismissalMode = updates.dismissalMode { alarm.dismissalMode = dismissalMode }
+        if let dismissPhrase = updates.dismissPhrase { alarm.dismissPhrase = dismissPhrase }
         alarms[index] = alarm
         save()
         cancelAlarmNotification(id)
@@ -162,4 +164,6 @@ struct PartialAlarmUpdate {
     var questionDifficulty: String? = nil
     var questionCategories: [String]? = nil
     var vibrate: Bool? = nil
+    var dismissalMode: String? = nil
+    var dismissPhrase: String? = nil
 }

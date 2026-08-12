@@ -7,6 +7,7 @@ import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
 import { getRandomQuestions } from '@/data/questions';
 import QuestionCard from '@/components/QuestionCard';
+import PhraseChallenge from '@/components/PhraseChallenge';
 import { formatTime12h } from '@/utils/time';
 import { Question } from '@/types/alarm';
 import MotivationalQuote from '@/components/MotivationalQuote';
@@ -78,13 +79,15 @@ export default function AlarmRingingScreen() {
       return;
     }
     
-    const randomQuestions = getRandomQuestions(
-      50,
-      alarm.questionDifficulty,
-      alarm.questionCategories
-    );
-    setQuestions(randomQuestions);
-    console.log('Generated questions pool:', randomQuestions.length, 'questions. Need', alarm.questionCount, 'correct answers.');
+    if (alarm.dismissalMode === 'questions') {
+      const randomQuestions = getRandomQuestions(
+        50,
+        alarm.questionDifficulty,
+        alarm.questionCategories
+      );
+      setQuestions(randomQuestions);
+      console.log('Generated questions pool:', randomQuestions.length, 'questions. Need', alarm.questionCount, 'correct answers.');
+    }
     
     // Play alarm sound - wait a bit for audio mode to be set
     async function playSound() {
@@ -278,7 +281,7 @@ export default function AlarmRingingScreen() {
     setCurrentQuestionIndex(0);
     setCorrectAnswers(0);
     
-    if (alarm) {
+    if (alarm && alarm.dismissalMode === 'questions') {
       const newQuestions = getRandomQuestions(
         50,
         alarm.questionDifficulty,
@@ -291,6 +294,22 @@ export default function AlarmRingingScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     }
   }, [alarm]);
+
+  const handlePhraseCorrect = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    if (sound) {
+      sound.stopAsync().catch(err => console.log('Error stopping sound:', err));
+    }
+    if (Platform.OS !== 'web') {
+      Vibration.cancel();
+    }
+    if (volumeIntervalRef.current) {
+      clearInterval(volumeIntervalRef.current);
+    }
+    setCompleted(true);
+  }, [sound]);
   
   const handleFinish = useCallback(() => {
     if (!alarm) return;
@@ -300,8 +319,8 @@ export default function AlarmRingingScreen() {
       alarmId: alarm.id,
       date: new Date().toISOString(),
       wakeUpTime: new Date().toISOString(),
-      questionsAnswered: currentQuestionIndex + 1,
-      questionsCorrect: correctAnswers,
+      questionsAnswered: alarm.dismissalMode === 'phrase' ? 0 : currentQuestionIndex + 1,
+      questionsCorrect: alarm.dismissalMode === 'phrase' ? 0 : correctAnswers,
       snoozeCount,
       dismissed: false,
     });
@@ -313,7 +332,7 @@ export default function AlarmRingingScreen() {
     router.replace('/');
   }, [alarm, currentQuestionIndex, correctAnswers, snoozeCount, addHistory, setActiveAlarm, router]);
   
-  if (!alarm || questions.length === 0) {
+  if (!alarm || (alarm.dismissalMode === 'questions' && questions.length === 0)) {
     return (
       <View style={styles.container}>
         <Text style={styles.loadingText}>Loading...</Text>
@@ -374,7 +393,14 @@ export default function AlarmRingingScreen() {
       </View>
       
       <View style={styles.questionContainer}>
-        {currentQuestionIndex < questions.length ? (
+        {alarm.dismissalMode === 'phrase' ? (
+          <PhraseChallenge
+            phrase={alarm.dismissPhrase}
+            onCorrect={handlePhraseCorrect}
+            onSnooze={handleSnooze}
+            snoozeCount={snoozeCount}
+          />
+        ) : currentQuestionIndex < questions.length ? (
           <QuestionCard
             key={questions[currentQuestionIndex].id}
             question={questions[currentQuestionIndex]}
@@ -392,15 +418,17 @@ export default function AlarmRingingScreen() {
         )}
       </View>
       
-      <TouchableOpacity 
-        style={styles.snoozeButton} 
-        onPress={handleSnooze}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.snoozeButtonText}>
-          Start Over ({snoozeCount})
-        </Text>
-      </TouchableOpacity>
+      {alarm.dismissalMode !== 'phrase' && (
+        <TouchableOpacity 
+          style={styles.snoozeButton} 
+          onPress={handleSnooze}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.snoozeButtonText}>
+            Start Over ({snoozeCount})
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

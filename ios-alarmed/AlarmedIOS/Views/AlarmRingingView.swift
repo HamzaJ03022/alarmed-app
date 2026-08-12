@@ -22,6 +22,16 @@ struct AlarmRingingView: View {
                 MotivationalQuoteView(quote: selectedQuote) {
                     finishAlarm()
                 }
+            } else if alarm.dismissalMode == "phrase" {
+                VStack(spacing: 0) {
+                    headerSection
+                    PhraseChallengeView(
+                        phrase: alarm.dismissPhrase,
+                        onCorrect: handlePhraseCorrect,
+                        onSnooze: handleSnooze,
+                        snoozeCount: snoozeCount
+                    )
+                }
             } else if questions.isEmpty {
                 VStack {
                     ProgressView()
@@ -113,11 +123,13 @@ struct AlarmRingingView: View {
 
     private func startAlarm() {
         alarmTime = TimeFormatter.formatTime12h(alarm.time)
-        questions = QuestionBank.getRandomQuestions(
-            count: 50,
-            difficulty: alarm.questionDifficulty,
-            categories: alarm.questionCategories
-        )
+        if alarm.dismissalMode == "questions" {
+            questions = QuestionBank.getRandomQuestions(
+                count: 50,
+                difficulty: alarm.questionDifficulty,
+                categories: alarm.questionCategories
+            )
+        }
         let quotes = viewModel.quotes
         selectedQuote = quotes.randomElement() ?? "Rise and shine! Today is full of possibilities."
 
@@ -160,19 +172,27 @@ struct AlarmRingingView: View {
         snoozeCount += 1
         currentQuestionIndex = 0
         correctAnswers = 0
-        questions = QuestionBank.getRandomQuestions(
-            count: 50,
-            difficulty: alarm.questionDifficulty,
-            categories: alarm.questionCategories
-        )
+        if alarm.dismissalMode == "questions" {
+            questions = QuestionBank.getRandomQuestions(
+                count: 50,
+                difficulty: alarm.questionDifficulty,
+                categories: alarm.questionCategories
+            )
+        }
         HapticManager.warningNotification()
+    }
+
+    private func handlePhraseCorrect() {
+        HapticManager.successNotification()
+        AudioManager.shared.stop()
+        completed = true
     }
 
     private func finishAlarm() {
         viewModel.addHistory(AlarmHistory(
             alarmId: alarm.id,
-            questionsAnswered: currentQuestionIndex + 1,
-            questionsCorrect: correctAnswers,
+            questionsAnswered: alarm.dismissalMode == "phrase" ? 0 : currentQuestionIndex + 1,
+            questionsCorrect: alarm.dismissalMode == "phrase" ? 0 : correctAnswers,
             snoozeCount: snoozeCount
         ))
         viewModel.activeAlarmId = nil
