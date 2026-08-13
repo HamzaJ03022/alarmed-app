@@ -25,7 +25,9 @@ final class NotificationManager: NSObject, @unchecked Sendable {
 
         let content = UNMutableNotificationContent()
         content.title = alarm.label.isEmpty ? "Alarm" : alarm.label
-        content.body = "Wake up! Answer questions to dismiss."
+        content.body = alarm.dismissalMode == "phrase"
+            ? "Wake up! Complete your challenge to dismiss."
+            : "Wake up! Answer questions to dismiss."
         content.sound = .default
         content.categoryIdentifier = "ALARM_CATEGORY"
         content.interruptionLevel = .timeSensitive

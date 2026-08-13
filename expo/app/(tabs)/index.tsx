@@ -15,6 +15,7 @@ export default function AlarmsScreen() {
   const setActiveAlarm = useAlarmStore(state => state.setActiveAlarm);
   const updateAlarm = useAlarmStore(state => state.updateAlarm);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTriggeredRef = useRef<Set<string>>(new Set());
   
   const activeAlarms = useMemo(() => {
     return alarms.filter(alarm => alarm.isActive);
@@ -23,11 +24,18 @@ export default function AlarmsScreen() {
   const checkAlarms = useCallback(() => {
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const todayKey = now.toDateString();
     
     for (const alarm of activeAlarms) {
       const alarmTime = alarm.time;
+      const triggerKey = `${alarm.id}-${todayKey}-${alarmTime}`;
       
-      if (alarmTime === currentTime && shouldRingToday(alarm.repeatDays)) {
+      if (
+        alarmTime === currentTime &&
+        shouldRingToday(alarm.repeatDays) &&
+        !lastTriggeredRef.current.has(triggerKey)
+      ) {
+        lastTriggeredRef.current.add(triggerKey);
         setActiveAlarm(alarm.id);
         // Auto-disable one-time alarms after ringing
         if (alarm.repeatDays.length === 0) {
@@ -45,7 +53,7 @@ export default function AlarmsScreen() {
     
     intervalRef.current = setInterval(() => {
       checkAlarms();
-    }, 5000);
+    }, 1000);
     
     return () => {
       if (intervalRef.current) {
