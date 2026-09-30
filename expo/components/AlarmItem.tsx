@@ -6,6 +6,7 @@ import { formatTime12h, formatRepeatDays, getNextAlarmTime, formatRelativeTime }
 import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
 import { Alarm } from '@/types/alarm';
+import { scheduleAlarmNotification, cancelAlarmNotifications } from '@/utils/notifications';
 
 interface AlarmItemProps {
   alarm: Alarm;
@@ -16,8 +17,15 @@ function AlarmItem({ alarm }: AlarmItemProps) {
   const toggleAlarm = useAlarmStore(state => state.toggleAlarm);
   
   const handleToggle = useCallback(() => {
+    const wasActive = alarm.isActive;
     toggleAlarm(alarm.id);
-  }, [toggleAlarm, alarm.id]);
+    // Keep OS notifications in sync with the new state
+    if (wasActive) {
+      cancelAlarmNotifications(alarm.id);
+    } else {
+      scheduleAlarmNotification({ ...alarm, isActive: true }).catch(() => {});
+    }
+  }, [toggleAlarm, alarm]);
   
   const handleEdit = useCallback(() => {
     router.push(`/edit-alarm/${alarm.id}`);

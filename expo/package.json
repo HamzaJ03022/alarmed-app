@@ -12,7 +12,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/slider": "5.0.1",
-    "@rork-ai/toolkit-sdk": "*",
+    "@rork-ai/toolkit-sdk": "0.3.3",
     "expo": "^54.0.25",
     "expo-asset": "~12.0.13",
     "expo-av": "~16.0.7",

@@ -6,7 +6,7 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     private override init() { super.init(); UNUserNotificationCenter.current().delegate = self }
 
     func requestPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge, .timeSensitive]) { granted, error in
             if let error = error {
                 print("Notification permission error: \(error)")
             }
