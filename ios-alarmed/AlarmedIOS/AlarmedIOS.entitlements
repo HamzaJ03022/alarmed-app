@@ -4,7 +4,5 @@
 <dict>
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
-	<key>com.apple.developer.alarmkit.usage-description</key>
-	<string>Alarmed schedules system alarms that wake you up with a wake-up challenge.</string>
 </dict>
 </plist>
