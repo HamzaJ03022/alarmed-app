@@ -133,11 +133,15 @@ struct AlarmRingingView: View {
         let quotes = viewModel.quotes
         selectedQuote = quotes.randomElement() ?? "Rise and shine! Today is full of possibilities."
 
+        let shouldVibrate = viewModel.vibrationEnabled && alarm.vibrate
         if viewModel.soundEnabled {
             AudioManager.shared.playAlarm(
                 volume: viewModel.volume,
-                crescendo: viewModel.crescendoEnabled
+                crescendo: viewModel.crescendoEnabled,
+                vibrate: shouldVibrate
             )
+        } else if shouldVibrate {
+            AudioManager.shared.startVibration()
         }
 
         if viewModel.crescendoEnabled {
@@ -197,6 +201,11 @@ struct AlarmRingingView: View {
             questionsCorrect: alarm.dismissalMode == "phrase" ? 0 : correctAnswers,
             snoozeCount: snoozeCount
         ))
+        // One-time alarms auto-disable after ringing so they don't stay
+        // displayed as armed when they will never fire again.
+        if alarm.repeatDays.isEmpty {
+            viewModel.updateAlarm(id: alarm.id, with: PartialAlarmUpdate(isActive: false))
+        }
         viewModel.activeAlarmId = nil
     }
 }

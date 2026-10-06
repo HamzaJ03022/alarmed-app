@@ -5,6 +5,7 @@ struct SettingsView: View {
     @State private var showClearHistoryAlert = false
     @State private var showClearAlarmsAlert = false
     @State private var showQuotes = false
+    @State private var showPrivacyPolicy = false
 
     var body: some View {
         NavigationStack {
@@ -36,6 +37,11 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showQuotes) {
                 QuotesView()
+            }
+            .sheet(isPresented: $showPrivacyPolicy) {
+                NavigationStack {
+                    PrivacyPolicyView()
+                }
             }
         }
     }
@@ -206,6 +212,13 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 18)
             }
+
+            navigationButton(
+                icon: "lock.shield",
+                title: "Privacy Policy",
+                subtitle: "How Alarmed handles your data",
+                action: { showPrivacyPolicy = true }
+            )
         }
         .padding(24)
         .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))

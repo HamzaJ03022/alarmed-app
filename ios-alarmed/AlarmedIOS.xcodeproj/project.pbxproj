@@ -509,7 +509,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -545,7 +545,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -567,7 +567,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -589,7 +589,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -609,7 +609,7 @@
 				DEVELOPMENT_TEAM = "$(DEVELOPMENT_TEAM)";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -629,7 +629,7 @@
 				DEVELOPMENT_TEAM = "$(DEVELOPMENT_TEAM)";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -644,7 +644,7 @@
 		XX0140476FE3B9F54FD642XX /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9.alarmedwidget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed.alarmedwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -666,7 +666,7 @@
 		XXB9450F0A8E6ED1C0B81BXX /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.26axgnocrbd7z38k5nxp9.alarmedwidget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nyytech.alarmed.alarmedwidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
