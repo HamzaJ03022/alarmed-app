@@ -13,6 +13,7 @@ struct CreateAlarmView: View {
     @State private var vibrate = true
     @State private var dismissalMode: String = "questions"
     @State private var dismissPhrase = ""
+    @State private var didApplyDefaults = false
 
     private let allDays: [(key: String, label: String)] = [
         ("mon", "M"), ("tue", "T"), ("wed", "W"), ("thu", "T"),
@@ -35,6 +36,7 @@ struct CreateAlarmView: View {
                 .padding(20)
             }
             .background(AppColors.background)
+            .onAppear(perform: applyOnboardingDefaults)
             .navigationTitle("Create Alarm")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -327,6 +329,13 @@ struct CreateAlarmView: View {
 
     private var phraseIsValid: Bool {
         dismissalMode == "questions" || dismissPhrase.count >= 10
+    }
+
+    private func applyOnboardingDefaults() {
+        guard !didApplyDefaults else { return }
+        didApplyDefaults = true
+        dismissalMode = viewModel.defaultChallengeMode
+        dismissPhrase = viewModel.onboardingPhrase
     }
 
     private func saveAlarm() {

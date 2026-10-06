@@ -17,6 +17,9 @@ final class AlarmsViewModel {
     var crescendoEnabled: Bool = false
     var soundEnabled: Bool = true
     var vibrationEnabled: Bool = true
+    var hasSeenOnboarding: Bool = false
+    var defaultChallengeMode: String = "questions"
+    var onboardingPhrase: String = ""
 
     private let storage = UserDefaults.standard
 
@@ -70,6 +73,13 @@ final class AlarmsViewModel {
         activeAlarmId = id
     }
 
+    func completeOnboarding(mode: String, phrase: String) {
+        hasSeenOnboarding = true
+        defaultChallengeMode = mode
+        onboardingPhrase = phrase
+        save()
+    }
+
     func addHistory(_ item: AlarmHistory) {
         var newItem = item
         newItem.id = UUID().uuidString
@@ -117,6 +127,9 @@ final class AlarmsViewModel {
     private let crescendoKey = "alarmed_crescendo"
     private let soundEnabledKey = "alarmed_sound_enabled"
     private let vibrationEnabledKey = "alarmed_vibration_enabled"
+    private let hasSeenOnboardingKey = "alarmed_has_seen_onboarding"
+    private let defaultChallengeModeKey = "alarmed_default_challenge_mode"
+    private let onboardingPhraseKey = "alarmed_onboarding_phrase"
 
     private func save() {
         if let data = try? JSONEncoder().encode(alarms) {
@@ -130,6 +143,9 @@ final class AlarmsViewModel {
         storage.set(crescendoEnabled, forKey: crescendoKey)
         storage.set(soundEnabled, forKey: soundEnabledKey)
         storage.set(vibrationEnabled, forKey: vibrationEnabledKey)
+        storage.set(hasSeenOnboarding, forKey: hasSeenOnboardingKey)
+        storage.set(defaultChallengeMode, forKey: defaultChallengeModeKey)
+        storage.set(onboardingPhrase, forKey: onboardingPhraseKey)
     }
 
     private func load() {
@@ -149,6 +165,18 @@ final class AlarmsViewModel {
         crescendoEnabled = storage.bool(forKey: crescendoKey)
         soundEnabled = storage.object(forKey: soundEnabledKey) == nil ? true : storage.bool(forKey: soundEnabledKey)
         vibrationEnabled = storage.object(forKey: vibrationEnabledKey) == nil ? true : storage.bool(forKey: vibrationEnabledKey)
+        // Upgrade-safe: users with existing data skip the intro; fresh installs see it
+        if storage.object(forKey: hasSeenOnboardingKey) != nil {
+            hasSeenOnboarding = storage.bool(forKey: hasSeenOnboardingKey)
+        } else if storage.object(forKey: volumeKey) != nil {
+            hasSeenOnboarding = true
+        }
+        if let savedMode = storage.string(forKey: defaultChallengeModeKey) {
+            defaultChallengeMode = savedMode
+        }
+        if storage.object(forKey: onboardingPhraseKey) != nil {
+            onboardingPhrase = storage.string(forKey: onboardingPhraseKey) ?? ""
+        }
     }
 
     // MARK: - Native Alarm Scheduling

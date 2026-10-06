@@ -12,6 +12,10 @@ interface AlarmState {
   crescendoEnabled: boolean;
   soundEnabled: boolean;
   vibrationEnabled: boolean;
+  hasSeenOnboarding: boolean;
+  defaultChallengeMode: DismissalMode;
+  onboardingPhrase: string;
+  completeOnboarding: (mode: DismissalMode, phrase: string) => void;
   addAlarm: (alarm: Omit<Alarm, 'id'>) => string;
   updateAlarm: (id: string, alarm: Partial<Alarm>) => void;
   deleteAlarm: (id: string) => void;
@@ -47,7 +51,18 @@ export const useAlarmStore = create<AlarmState>()(
       crescendoEnabled: false, // Crescendo disabled by default
       soundEnabled: true,
       vibrationEnabled: true,
-      
+      hasSeenOnboarding: false,
+      defaultChallengeMode: 'questions',
+      onboardingPhrase: '',
+
+      completeOnboarding: (mode, phrase) => {
+        set({
+          hasSeenOnboarding: true,
+          defaultChallengeMode: mode,
+          onboardingPhrase: phrase,
+        });
+      },
+
       addAlarm: (alarm) => {
         const id = Date.now().toString();
         set((state) => ({
@@ -183,7 +198,7 @@ export const useAlarmStore = create<AlarmState>()(
     {
       name: 'alarmed-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown> | undefined;
         if (!state) return state as never;
@@ -199,6 +214,10 @@ export const useAlarmStore = create<AlarmState>()(
           if (state.soundEnabled === undefined) state.soundEnabled = true;
           if (state.vibrationEnabled === undefined) state.vibrationEnabled = true;
         }
+        // v2 -> v3: onboarding flags. Existing users skip the intro; fresh installs see it.
+        if (state.hasSeenOnboarding === undefined) state.hasSeenOnboarding = true;
+        if (state.defaultChallengeMode !== 'phrase') state.defaultChallengeMode = 'questions';
+        if (typeof state.onboardingPhrase !== 'string') state.onboardingPhrase = '';
         return state as never;
       },
     }

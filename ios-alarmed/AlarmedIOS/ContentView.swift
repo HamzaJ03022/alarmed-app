@@ -5,24 +5,28 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            TabView {
-                AlarmsListView()
-                    .tabItem {
-                        Image(systemName: "alarm.fill")
-                        Text("Alarms")
-                    }
-                HistoryListView()
-                    .tabItem {
-                        Image(systemName: "chart.bar.fill")
-                        Text("History")
-                    }
-                SettingsView()
-                    .tabItem {
-                        Image(systemName: "gearshape.fill")
-                        Text("Settings")
-                    }
+            if viewModel.hasSeenOnboarding {
+                TabView {
+                    AlarmsListView()
+                        .tabItem {
+                            Image(systemName: "alarm.fill")
+                            Text("Alarms")
+                        }
+                    HistoryListView()
+                        .tabItem {
+                            Image(systemName: "chart.bar.fill")
+                            Text("History")
+                        }
+                    SettingsView()
+                        .tabItem {
+                            Image(systemName: "gearshape.fill")
+                            Text("Settings")
+                        }
+                }
+                .tint(AppColors.primary)
+            } else {
+                OnboardingView()
             }
-            .tint(AppColors.primary)
 
             if let alarmId = viewModel.activeAlarmId {
                 if let alarm = viewModel.alarms.first(where: { $0.id == alarmId }) {

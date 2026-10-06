@@ -20,6 +20,9 @@ import { RepeatDay, QuestionDifficulty, QuestionCategory, DismissalMode } from '
 export default function CreateAlarmScreen() {
   const router = useRouter();
   const addAlarm = useAlarmStore(state => state.addAlarm);
+  // Start from the defaults the user picked during onboarding
+  const defaultMode = useAlarmStore(state => state.defaultChallengeMode);
+  const onboardingPhrase = useAlarmStore(state => state.onboardingPhrase);
   
   const [date, setDate] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -29,8 +32,8 @@ export default function CreateAlarmScreen() {
   const [questionDifficulty, setQuestionDifficulty] = useState<QuestionDifficulty>('medium');
   const [questionCategories, setQuestionCategories] = useState<QuestionCategory[]>(['math', 'general', 'puzzle']);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
-  const [dismissalMode, setDismissalMode] = useState<DismissalMode>('questions');
-  const [dismissPhrase, setDismissPhrase] = useState('');
+  const [dismissalMode, setDismissalMode] = useState<DismissalMode>(defaultMode);
+  const [dismissPhrase, setDismissPhrase] = useState(onboardingPhrase);
   
   const handleDayToggle = useCallback((day: RepeatDay) => {
     if (repeatDays.includes(day)) {

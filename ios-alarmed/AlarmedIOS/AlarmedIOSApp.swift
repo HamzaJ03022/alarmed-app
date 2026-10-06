@@ -5,7 +5,8 @@ struct AlarmedIOSApp: App {
     @State private var viewModel = AlarmsViewModel()
 
     init() {
-        NotificationManager.shared.requestPermission()
+        // Notification permission is requested from the onboarding
+        // "Enable Alarms" button, never automatically at launch.
         setupTabBarAppearance()
     }
 

@@ -8,6 +8,7 @@ import { colors } from "@/constants/colors";
 import * as Notifications from 'expo-notifications';
 import { useAlarmStore } from "@/store/alarm-store";
 import { rescheduleAllAlarms } from "@/utils/notifications";
+import Onboarding from "./onboarding";
 
 
 
@@ -33,19 +34,21 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
   const appState = useRef(AppState.currentState);
+  const hasSeenOnboarding = useAlarmStore((state) => state.hasSeenOnboarding);
   const alarms = useAlarmStore((state) => state.alarms);
   const setActiveAlarm = useAlarmStore((state) => state.setActiveAlarm);
   const router = useRouter();
 
+  // Never prompt at launch — permission is requested from the onboarding
+  // "Enable Alarms" button. Here we only reschedule if already granted.
   useEffect(() => {
-    const requestPermissions = async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      console.log('Notification permission status:', status);
+    const rescheduleIfAllowed = async () => {
+      const { status } = await Notifications.getPermissionsAsync();
       if (status === 'granted') {
         await rescheduleAllAlarms(alarms);
       }
     };
-    requestPermissions();
+    rescheduleIfAllowed();
   }, []);
 
   // Handle notification tap - navigate to alarm ringing screen
@@ -114,7 +117,7 @@ export default function RootLayout() {
     
       <>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-        <RootLayoutNav />
+        {hasSeenOnboarding ? <RootLayoutNav /> : <Onboarding />}
       </>
     
   );

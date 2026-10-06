@@ -5,12 +5,15 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     static let shared = NotificationManager()
     private override init() { super.init(); UNUserNotificationCenter.current().delegate = self }
 
-    func requestPermission() {
+    func requestPermission(completion: ((Bool) -> Void)? = nil) {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge, .timeSensitive]) { granted, error in
             if let error = error {
                 print("Notification permission error: \(error)")
             }
             print("Notification permission granted: \(granted)")
+            if let completion = completion {
+                DispatchQueue.main.async { completion(granted) }
+            }
         }
     }
 
