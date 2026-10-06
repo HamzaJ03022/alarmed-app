@@ -69,7 +69,7 @@ private struct WarningBanner: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 18))
                 .foregroundStyle(AppColors.warning)
-            Text("Keep the app running for alarms to work")
+            Text("Alarms ring even when the app is closed")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppColors.warning)
             Spacer()

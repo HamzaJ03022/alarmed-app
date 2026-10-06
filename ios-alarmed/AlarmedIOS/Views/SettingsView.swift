@@ -55,7 +55,7 @@ struct SettingsView: View {
                 Text("Important")
                     .font(.body.weight(.bold))
                     .foregroundStyle(AppColors.warning)
-                Text("Keep the app running in the background for alarms to work. Closing the app will prevent alarms from ringing.")
+                Text("Alarms ring even when the app is closed. Keep notifications enabled — on iOS 18–25 alarms are delivered as notifications.")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(AppColors.warning.opacity(0.9))
                     .lineSpacing(2)
