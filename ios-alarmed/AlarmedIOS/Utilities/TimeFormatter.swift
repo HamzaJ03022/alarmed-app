@@ -13,6 +13,9 @@ enum TimeFormatter {
 
     static func formatTimeFromDate(_ date: Date) -> String {
         let formatter = DateFormatter()
+        // Fixed-format parsing/saving must not follow the device locale
+        // (some locales emit non-Latin digits that Int() cannot parse).
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }

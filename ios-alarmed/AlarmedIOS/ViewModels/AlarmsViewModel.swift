@@ -20,6 +20,10 @@ final class AlarmsViewModel {
     var hasSeenOnboarding: Bool = false
     var defaultChallengeMode: String = "questions"
     var onboardingPhrase: String = ""
+    /// Human-readable outcome of the last scheduling attempt (Settings diagnostics).
+    var alarmScheduleStatus: String? = nil
+    /// Alarms currently registered with the system scheduler, when exposed.
+    var systemAlarmCount: Int? = nil
 
     private let storage = UserDefaults.standard
     private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()
@@ -31,7 +35,7 @@ final class AlarmsViewModel {
         newAlarm.id = UUID().uuidString
         alarms.append(newAlarm)
         save()
-        scheduleAlarmNotification(newAlarm)
+        Task { await scheduleAndRecord(newAlarm) }
     }
 
     func updateAlarm(id: String, with updates: PartialAlarmUpdate) {
@@ -49,25 +53,30 @@ final class AlarmsViewModel {
         if let dismissPhrase = updates.dismissPhrase { alarm.dismissPhrase = dismissPhrase }
         alarms[index] = alarm
         save()
-        cancelAlarmNotification(id)
-        if alarm.isActive { scheduleAlarmNotification(alarm) }
+        // Cancel first, then reschedule, in one ordered task — an unordered
+        // cancel can land after the new schedule and silently delete it.
+        Task {
+            await scheduler.cancel(id: id)
+            if alarm.isActive { await scheduleAndRecord(alarm) }
+        }
     }
 
     func deleteAlarm(id: String) {
         alarms.removeAll { $0.id == id }
-        cancelAlarmNotification(id)
         save()
+        Task { await scheduler.cancel(id: id) }
     }
 
     func toggleAlarm(id: String) {
         guard let index = alarms.firstIndex(where: { $0.id == id }) else { return }
         alarms[index].isActive.toggle()
-        if alarms[index].isActive {
-            scheduleAlarmNotification(alarms[index])
-        } else {
-            cancelAlarmNotification(id)
-        }
+        let alarm = alarms[index]
         save()
+        if alarm.isActive {
+            Task { await scheduleAndRecord(alarm) }
+        } else {
+            Task { await scheduler.cancel(id: id) }
+        }
     }
 
     func setActiveAlarm(_ id: String?) {
@@ -107,7 +116,18 @@ final class AlarmsViewModel {
     }
 
     func clearHistory() { history.removeAll(); save() }
-    func clearAlarms() { alarms.removeAll(); save() }
+
+    func clearAlarms() {
+        let activeAlarms = alarms.filter(\.isActive)
+        alarms.removeAll()
+        save()
+        // Also unregister the system alarms so nothing keeps ringing.
+        Task {
+            for alarm in activeAlarms {
+                await scheduler.cancel(id: alarm.id)
+            }
+        }
+    }
 
     func addQuote(_ quote: String) { quotes.append(quote); save() }
     func updateQuote(index: Int, quote: String) {
@@ -182,12 +202,32 @@ final class AlarmsViewModel {
 
     // MARK: - Native Alarm Scheduling
 
-    private func scheduleAlarmNotification(_ alarm: Alarm) {
-        scheduler.schedule(alarm)
+    /// Schedules with the active scheduler and records the outcome so Settings
+    /// can surface scheduling failures instead of failing silently.
+    private func scheduleAndRecord(_ alarm: Alarm) async {
+        let result = await scheduler.schedule(alarm)
+        systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+        alarmScheduleStatus = Self.describe(result, time: alarm.time)
     }
 
-    private func cancelAlarmNotification(_ id: String) {
-        scheduler.cancel(id: id)
+    func refreshSystemAlarmCount() {
+        Task {
+            systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+        }
+    }
+
+    private static func describe(_ result: AlarmScheduleResult, time: String) -> String {
+        if let fallback = result.fallbackError {
+            let reason = result.alarmKitError ?? "scheduling error"
+            return "Could not schedule \(time): \(reason). Notification fallback also failed: \(fallback)."
+        }
+        if let kitError = result.alarmKitError {
+            return "AlarmKit unavailable (\(kitError)) — \(time) is set as a time-sensitive notification."
+        }
+        if result.usedAlarmKit {
+            return "System alarm registered with AlarmKit for \(time)."
+        }
+        return "Scheduled as a time-sensitive notification for \(time)."
     }
 }
 

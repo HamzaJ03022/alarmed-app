@@ -13,6 +13,7 @@ struct SettingsView: View {
                 VStack(spacing: 20) {
                     warningCard
 
+                    alarmEngineCard
                     alarmSettingsCard
                     dataManagementCard
                     aboutCard
@@ -64,6 +65,38 @@ struct SettingsView: View {
         .padding(18)
         .background(AppColors.warningBackground, in: RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.warning, lineWidth: 1))
+    }
+
+    /// Live scheduling diagnostics — surfaces AlarmKit registration results
+    /// that used to fail silently.
+    private var alarmEngineCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "alarm.waves.left.and.right")
+                    .font(.body)
+                    .foregroundStyle(AppColors.primary)
+                Text("Alarm Engine")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(AppColors.text)
+                Spacer()
+            }
+
+            if let status = viewModel.alarmScheduleStatus {
+                Text(status)
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .lineSpacing(2)
+            }
+
+            if let count = viewModel.systemAlarmCount {
+                Text("Registered system alarms: \(count)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+        }
+        .padding(18)
+        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
+        .task { viewModel.refreshSystemAlarmCount() }
     }
 
     private var alarmSettingsCard: some View {

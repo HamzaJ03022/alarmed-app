@@ -1,22 +1,46 @@
 import Foundation
 
 /// Abstracts alarm scheduling so the app can use AlarmKit (system alarms that
-/// break through Silent mode and Focus) on iOS 26+, with time-sensitive local
+/// break through Silent mode and Focus) on iOS 26+, with time-sensitive
 /// notifications as the fallback on older systems or when AlarmKit fails.
 protocol AlarmScheduling {
-    func schedule(_ alarm: Alarm)
-    func cancel(id: String)
+    /// Schedules the alarm if active. Returns a diagnostic result instead of
+    /// throwing, so scheduling failures can be surfaced in the UI rather than
+    /// failing silently.
+    func schedule(_ alarm: Alarm) async -> AlarmScheduleResult
+
+    /// Cancels any scheduled system alarm and notification fallback for the id.
+    func cancel(id: String) async
+
+    /// Number of alarms currently registered with the system scheduler, or nil
+    /// when the underlying system does not expose them (notifications).
+    func registeredSystemAlarmCount() async -> Int?
+}
+
+/// Outcome of one scheduling attempt, used for the Settings diagnostics.
+struct AlarmScheduleResult {
+    var alarmKitError: String?
+    var fallbackError: String?
+    var usedAlarmKit: Bool
+
+    var isSuccess: Bool { alarmKitError == nil && fallbackError == nil }
 }
 
 /// Fallback scheduler backed by time-sensitive notifications.
 struct NotificationScheduler: AlarmScheduling {
-    func schedule(_ alarm: Alarm) {
-        NotificationManager.shared.scheduleAlarm(alarm)
+    func schedule(_ alarm: Alarm) async -> AlarmScheduleResult {
+        guard alarm.isActive else {
+            return AlarmScheduleResult(alarmKitError: nil, fallbackError: nil, usedAlarmKit: false)
+        }
+        let error = await NotificationManager.shared.scheduleAlarm(alarm)
+        return AlarmScheduleResult(alarmKitError: nil, fallbackError: error, usedAlarmKit: false)
     }
 
     func cancel(id: String) {
         NotificationManager.shared.cancelAlarm(id: id)
     }
+
+    func registeredSystemAlarmCount() async -> Int? { nil }
 }
 
 enum AlarmSchedulerFactory {

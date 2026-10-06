@@ -17,14 +17,16 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         }
     }
 
-    func scheduleAlarm(_ alarm: Alarm) {
-        guard alarm.isActive else { return }
+    /// Schedules the alarm as time-sensitive notification(s). Returns a
+    /// user-readable error, or nil on success.
+    func scheduleAlarm(_ alarm: Alarm) async -> String? {
+        guard alarm.isActive else { return nil }
         cancelAlarm(id: alarm.id)
 
         let parts = alarm.time.split(separator: ":")
         guard parts.count == 2,
               let hours = Int(parts[0]),
-              let minutes = Int(parts[1]) else { return }
+              let minutes = Int(parts[1]) else { return "The alarm time could not be parsed." }
 
         let content = UNMutableNotificationContent()
         content.title = alarm.label.isEmpty ? "Alarm" : alarm.label
@@ -36,14 +38,15 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         content.categoryIdentifier = "ALARM_CATEGORY"
         content.interruptionLevel = .timeSensitive
 
-        if alarm.repeatDays.isEmpty {
-            var components = DateComponents()
-            components.hour = hours
-            components.minute = minutes
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-            let request = UNNotificationRequest(identifier: alarm.id, content: content, trigger: trigger)
-            UNUserNotificationCenter.current().add(request)
-        } else {
+        do {
+            if alarm.repeatDays.isEmpty {
+                var components = DateComponents()
+                components.hour = hours
+                components.minute = minutes
+                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+                let request = UNNotificationRequest(identifier: alarm.id, content: content, trigger: trigger)
+                try await UNUserNotificationCenter.current().add(request)
+            } else {
             let dayMap: [String: Int] = [
                 "sun": 1, "mon": 2, "tue": 3, "wed": 4,
                 "thu": 5, "fri": 6, "sat": 7
@@ -60,9 +63,13 @@ final class NotificationManager: NSObject, @unchecked Sendable {
                     content: content,
                     trigger: trigger
                 )
-                UNUserNotificationCenter.current().add(request)
+                try await UNUserNotificationCenter.current().add(request)
+                }
             }
+        } catch {
+            return error.localizedDescription
         }
+        return nil
     }
 
     func cancelAlarm(id: String) {

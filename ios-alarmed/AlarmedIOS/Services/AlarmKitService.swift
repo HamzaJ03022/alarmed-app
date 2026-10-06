@@ -1,6 +1,7 @@
 import ActivityKit
 import AlarmKit
 import Foundation
+import os
 import SwiftUI
 
 enum AlarmScheduleError: LocalizedError {
@@ -22,27 +23,38 @@ struct AlarmKitScheduler: AlarmScheduling {
     /// Disambiguates from the app's own `Alarm` model struct.
     private typealias SystemAlarm = AlarmKit.Alarm
 
-    func schedule(_ alarm: Alarm) {
-        guard alarm.isActive else { return }
+    private static let logger = Logger(subsystem: "com.nyytech.alarmed", category: "AlarmKit")
+
+    func schedule(_ alarm: Alarm) async -> AlarmScheduleResult {
+        guard alarm.isActive else {
+            return AlarmScheduleResult(alarmKitError: nil, fallbackError: nil, usedAlarmKit: false)
+        }
         let kitId = UUID(uuidString: alarm.id) ?? UUID()
-        Task {
-            do {
-                try await Self.scheduleWithAlarmKit(alarm, id: kitId)
-            } catch {
-                print("AlarmKit scheduling failed, using notification fallback: \(error.localizedDescription)")
-                NotificationManager.shared.scheduleAlarm(alarm)
-            }
+        do {
+            try await Self.scheduleWithAlarmKit(alarm, id: kitId)
+            Self.logger.info("AlarmKit alarm registered (id: \(alarm.id, privacy: .public), time: \(alarm.time, privacy: .public))")
+            return AlarmScheduleResult(alarmKitError: nil, fallbackError: nil, usedAlarmKit: true)
+        } catch {
+            Self.logger.error("AlarmKit scheduling failed (id: \(alarm.id, privacy: .public)): \(error.localizedDescription, privacy: .public)")
+            let fallbackError = await NotificationManager.shared.scheduleAlarm(alarm)
+            return AlarmScheduleResult(
+                alarmKitError: error.localizedDescription,
+                fallbackError: fallbackError,
+                usedAlarmKit: false
+            )
         }
     }
 
-    func cancel(id: String) {
+    func cancel(id: String) async {
         // Cancel both systems: the alarm may have been scheduled as a
         // notification fallback before (e.g. permission denied earlier).
-        NotificationScheduler().cancel(id: id)
+        NotificationManager.shared.cancelAlarm(id: id)
         let uuid = UUID(uuidString: id) ?? UUID()
-        Task {
-            try? await AlarmManager.shared.cancel(id: uuid)
-        }
+        try? await AlarmManager.shared.cancel(id: uuid)
+    }
+
+    func registeredSystemAlarmCount() async -> Int? {
+        (try? AlarmManager.shared.alarms)?.count
     }
 
     private static func scheduleWithAlarmKit(_ alarm: Alarm, id: UUID) async throws {
@@ -71,11 +83,23 @@ struct AlarmKitScheduler: AlarmScheduling {
             "thu": .thursday, "fri": .friday, "sat": .saturday
         ]
         let weekdays = alarm.repeatDays.compactMap { weekdayMap[$0] }
-        let recurrence: SystemAlarm.Schedule.Relative.Recurrence = weekdays.isEmpty ? .never : .weekly(weekdays)
-        let schedule = SystemAlarm.Schedule.relative(.init(
-            time: .init(hour: hour, minute: minute),
-            repeats: recurrence
-        ))
+
+        let schedule: SystemAlarm.Schedule
+        if weekdays.isEmpty {
+            // One-time alarms fire at an exact pre-computed date. Fixed-date
+            // one-shots are what shipping AlarmKit apps register; they remove
+            // any dependence on relative-schedule resolution on the device.
+            guard let fireDate = TimeFormatter.getNextAlarmTime(time: alarm.time, repeatDays: []) else {
+                throw AlarmScheduleError.invalidTime
+            }
+            schedule = .fixed(fireDate)
+        } else {
+            let recurrence: SystemAlarm.Schedule.Relative.Recurrence = .weekly(weekdays)
+            schedule = SystemAlarm.Schedule.relative(.init(
+                time: .init(hour: hour, minute: minute),
+                repeats: recurrence
+            ))
+        }
 
         let title = LocalizedStringResource(stringLiteral: alarm.label.isEmpty ? "Wake up!" : alarm.label)
         let alert = AlarmPresentation.Alert(
