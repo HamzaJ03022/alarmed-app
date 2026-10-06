@@ -28,7 +28,22 @@ final class AlarmsViewModel {
     private let storage = UserDefaults.standard
     private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()
 
-    init() { load() }
+    init() {
+        load()
+        reconcileOnLaunch()
+    }
+
+    /// Repairs alarms that were registered by an older build (or lost after an
+    /// update/reboot): the scheduler re-registers any active alarm missing from
+    /// the system. Stable alarm IDs make this idempotent.
+    private func reconcileOnLaunch() {
+        let active = alarms.filter(\.isActive)
+        guard !active.isEmpty else { return }
+        Task {
+            await scheduler.reconcile(alarms: active)
+            systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+        }
+    }
 
     func addAlarm(_ alarm: Alarm) {
         var newAlarm = alarm

@@ -57,6 +57,17 @@ struct AlarmKitScheduler: AlarmScheduling {
         (try? AlarmManager.shared.alarms)?.count
     }
 
+    /// Repairs alarms lost between sessions: any active alarm whose stable ID
+    /// is not registered with AlarmKit gets scheduled again. Stable IDs make
+    /// this idempotent — no cancel/churn for alarms that are already live.
+    func reconcile(alarms: [Alarm]) async {
+        guard let scheduled = try? AlarmManager.shared.alarms else { return }
+        let scheduledIds = Set(scheduled.map(\.id.uuidString))
+        for alarm in alarms where alarm.isActive && !scheduledIds.contains(alarm.id) {
+            _ = await schedule(alarm)
+        }
+    }
+
     private static func scheduleWithAlarmKit(_ alarm: Alarm, id: UUID) async throws {
         let manager = AlarmManager.shared
         switch manager.authorizationState {

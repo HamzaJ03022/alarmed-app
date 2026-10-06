@@ -15,6 +15,15 @@ protocol AlarmScheduling {
     /// Number of alarms currently registered with the system scheduler, or nil
     /// when the underlying system does not expose them (notifications).
     func registeredSystemAlarmCount() async -> Int?
+
+    /// Re-registers active alarms that are missing from the system scheduler
+    /// (e.g. after an app update or reboot). No-op for schedulers that cannot
+    /// enumerate their registrations.
+    func reconcile(alarms: [Alarm]) async
+}
+
+extension AlarmScheduling {
+    func reconcile(alarms: [Alarm]) async {}
 }
 
 /// Outcome of one scheduling attempt, used for the Settings diagnostics.
