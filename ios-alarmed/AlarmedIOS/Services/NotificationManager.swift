@@ -31,7 +31,8 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         content.body = alarm.dismissalMode == "phrase"
             ? "Wake up! Complete your challenge to dismiss."
             : "Wake up! Answer questions to dismiss."
-        content.sound = .default
+        // Custom bundled alarm tone (10s loop-safe beep pattern)
+        content.sound = UNNotificationSound(named: UNNotificationSoundName("alarm.mp3"))
         content.categoryIdentifier = "ALARM_CATEGORY"
         content.interruptionLevel = .timeSensitive
 

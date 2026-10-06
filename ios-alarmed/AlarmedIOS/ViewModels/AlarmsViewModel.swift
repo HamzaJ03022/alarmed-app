@@ -22,6 +22,7 @@ final class AlarmsViewModel {
     var onboardingPhrase: String = ""
 
     private let storage = UserDefaults.standard
+    private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()
 
     init() { load() }
 
@@ -182,12 +183,11 @@ final class AlarmsViewModel {
     // MARK: - Native Alarm Scheduling
 
     private func scheduleAlarmNotification(_ alarm: Alarm) {
-        let manager = NotificationManager.shared
-        manager.scheduleAlarm(alarm)
+        scheduler.schedule(alarm)
     }
 
     private func cancelAlarmNotification(_ id: String) {
-        NotificationManager.shared.cancelAlarm(id: id)
+        scheduler.cancel(id: id)
     }
 }
 
