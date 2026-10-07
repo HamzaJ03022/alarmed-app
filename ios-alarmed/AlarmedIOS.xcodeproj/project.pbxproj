@@ -63,6 +63,13 @@
 			);
 			target = XXAD7AF1787BF4EC96E8A1XX /* AlarmedWidget */;
 		};
+		XX9E4B7A2C5D8F1A3B6C0EXX /* Exceptions for "AlarmedIOS" folder in "AlarmedIOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 105FC5792E9EAD3100EA8BCF /* AlarmedIOS */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -70,6 +77,9 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AlarmedIOS;
 			sourceTree = "<group>";
+			exceptions = (
+				XX9E4B7A2C5D8F1A3B6C0EXX /* Exceptions for "AlarmedIOS" folder in "AlarmedIOS" target */,
+			);
 		};
 		105FC58C2E9EAD3200EA8BCF /* AlarmedIOSTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -496,7 +506,7 @@
 				DEVELOPMENT_TEAM = "$(DEVELOPMENT_TEAM)";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAlarmKitUsageDescription = "Alarmed schedules system alarms that wake you up with a wake-up challenge.";
+				INFOPLIST_FILE = AlarmedIOS/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -532,7 +542,7 @@
 				DEVELOPMENT_TEAM = "$(DEVELOPMENT_TEAM)";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAlarmKitUsageDescription = "Alarmed schedules system alarms that wake you up with a wake-up challenge.";
+				INFOPLIST_FILE = AlarmedIOS/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
