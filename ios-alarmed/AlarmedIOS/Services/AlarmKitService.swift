@@ -16,8 +16,59 @@ enum AlarmScheduleError: LocalizedError {
     }
 }
 
-/// Schedules alarms with AlarmKit on iOS 26+. Falls back to time-sensitive
-/// notifications per alarm if AlarmKit authorization or scheduling fails.
+/// How much of the custom challenge UI an alarm registration carries. The
+/// system rejected the full combination with a bare error, so registration
+/// walks this ladder from richest to simplest and keeps the first accepted
+/// level. Nothing degrades silently — every attempt is recorded for the
+/// Settings diagnostics card.
+enum AlarmCapabilityLevel: Int, CaseIterable {
+    /// Done + Challenge buttons, both wired to the challenge intent.
+    case fullChallenge = 1
+    /// Challenge button + intent; Done uses system stop behavior.
+    case challengeOnly = 2
+    /// System-standard alert presentation, no custom buttons or intents.
+    case standardButtons = 3
+
+    var label: String {
+        switch self {
+        case .fullChallenge: return "full challenge layer (Done + Challenge buttons)"
+        case .challengeOnly: return "challenge-only layer (Challenge button, system Done)"
+        case .standardButtons: return "standard system buttons"
+        }
+    }
+}
+
+/// One rung of the capability ladder.
+struct AlarmKitAttempt {
+    var level: AlarmCapabilityLevel
+    var succeeded: Bool
+    var errorDetail: String?
+}
+
+/// Outcome of one registration pass, rendered into the Settings card.
+struct AlarmKitDiagnostics {
+    var permissionLine: String
+    var attempts: [AlarmKitAttempt]
+    var acceptedLevel: AlarmCapabilityLevel?
+
+    func summary() -> String {
+        var lines = [permissionLine]
+        if let accepted = acceptedLevel {
+            lines.append("Registered with AlarmKit — \(accepted.label).")
+        } else {
+            lines.append("AlarmKit rejected every alarm setup.")
+        }
+        for attempt in attempts where !attempt.succeeded {
+            lines.append("Rejected: \(attempt.level.label) — \(attempt.errorDetail ?? "unknown error")")
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+/// Schedules alarms with AlarmKit on iOS 26+. Registration follows Apple's
+/// official sample shape (relative schedules for one-time and weekly alarms)
+/// and falls back to time-sensitive notifications per alarm only when the
+/// system rejects every capability level.
 @available(iOS 26.0, *)
 struct AlarmKitScheduler: AlarmScheduling {
     /// Disambiguates from the app's own `Alarm` model struct.
@@ -30,19 +81,29 @@ struct AlarmKitScheduler: AlarmScheduling {
             return AlarmScheduleResult(alarmKitError: nil, fallbackError: nil, usedAlarmKit: false)
         }
         let kitId = UUID(uuidString: alarm.id) ?? UUID()
-        do {
-            try await Self.scheduleWithAlarmKit(alarm, id: kitId)
-            Self.logger.info("AlarmKit alarm registered (id: \(alarm.id, privacy: .public), time: \(alarm.time, privacy: .public))")
-            return AlarmScheduleResult(alarmKitError: nil, fallbackError: nil, usedAlarmKit: true)
-        } catch {
-            Self.logger.error("AlarmKit scheduling failed (id: \(alarm.id, privacy: .public)): \(error.localizedDescription, privacy: .public)")
-            let fallbackError = await NotificationManager.shared.scheduleAlarm(alarm)
+        let diagnostics = await Self.registerWithAlarmKit(alarm, id: kitId)
+        if let accepted = diagnostics.acceptedLevel {
+            Self.logger.info("AlarmKit alarm registered (id: \(alarm.id, privacy: .public)) at level \(accepted.rawValue, privacy: .public)")
             return AlarmScheduleResult(
-                alarmKitError: error.localizedDescription,
-                fallbackError: fallbackError,
-                usedAlarmKit: false
+                alarmKitError: nil,
+                fallbackError: nil,
+                usedAlarmKit: true,
+                detail: diagnostics.summary()
             )
         }
+        Self.logger.error("AlarmKit rejected all levels (id: \(alarm.id, privacy: .public))")
+        let fallbackError = await NotificationManager.shared.scheduleAlarm(alarm)
+        var detail = diagnostics.summary()
+        detail += "\nUsing a time-sensitive notification instead."
+        if let fallback = fallbackError {
+            detail += "\nNotification fallback also failed: \(fallback)"
+        }
+        return AlarmScheduleResult(
+            alarmKitError: diagnostics.attempts.last?.errorDetail ?? "unknown AlarmKit error",
+            fallbackError: fallbackError,
+            usedAlarmKit: false,
+            detail: detail
+        )
     }
 
     func cancel(id: String) async {
@@ -68,71 +129,194 @@ struct AlarmKitScheduler: AlarmScheduling {
         }
     }
 
-    private static func scheduleWithAlarmKit(_ alarm: Alarm, id: UUID) async throws {
+    /// One-tap check from Settings: registers a throwaway alarm about two
+    /// minutes out through the same capability ladder, reports which level the
+    /// system accepted, then removes the alarm.
+    func runDiagnostics() async -> String {
+        let probeId = UUID()
+        let fireDate = Calendar.current.date(byAdding: .minute, value: 2, to: Date()) ?? Date()
+        let components = Calendar.current.dateComponents([.hour, .minute], from: fireDate)
+        let timeString: String
+        if let hour = components.hour, let minute = components.minute {
+            timeString = String(format: "%02d:%02d", hour, minute)
+        } else {
+            timeString = "23:59"
+        }
+        let probe = Alarm(id: probeId.uuidString, time: timeString, label: "Alarmed check")
+        let diagnostics = await Self.registerWithAlarmKit(probe, id: probeId)
+        try? await AlarmManager.shared.cancel(id: probeId)
+        NotificationManager.shared.cancelAlarm(id: probeId.uuidString)
+        return diagnostics.summary()
+    }
+
+    // MARK: - Registration
+
+    private static func registerWithAlarmKit(_ alarm: Alarm, id: UUID) async -> AlarmKitDiagnostics {
         let manager = AlarmManager.shared
+
         switch manager.authorizationState {
         case .notDetermined:
-            let state = try await manager.requestAuthorization()
-            guard state == .authorized else { throw AlarmScheduleError.notAuthorized }
-        case .authorized:
-            break
+            do {
+                let state = try await manager.requestAuthorization()
+                guard state == .authorized else {
+                    return AlarmKitDiagnostics(
+                        permissionLine: "Permission: the system returned \(String(describing: state)) after the prompt.",
+                        attempts: [],
+                        acceptedLevel: nil
+                    )
+                }
+            } catch {
+                return AlarmKitDiagnostics(
+                    permissionLine: "Permission request failed — \(describe(error))",
+                    attempts: [],
+                    acceptedLevel: nil
+                )
+            }
         case .denied:
-            throw AlarmScheduleError.notAuthorized
+            return AlarmKitDiagnostics(
+                permissionLine: "Permission: denied — turn on Alarms for Alarmed in the Settings app, then recreate the alarm.",
+                attempts: [],
+                acceptedLevel: nil
+            )
         @unknown default:
-            throw AlarmScheduleError.notAuthorized
+            return AlarmKitDiagnostics(
+                permissionLine: "Permission: unknown system state.",
+                attempts: [],
+                acceptedLevel: nil
+            )
+        }
+        let permissionLine = "Permission: authorized."
+
+        guard let schedule = makeSchedule(for: alarm) else {
+            return AlarmKitDiagnostics(
+                permissionLine: permissionLine,
+                attempts: [AlarmKitAttempt(
+                    level: .fullChallenge,
+                    succeeded: false,
+                    errorDetail: "the alarm time \"\(alarm.time)\" could not be parsed"
+                )],
+                acceptedLevel: nil
+            )
         }
 
+        let title = LocalizedStringResource(stringLiteral: alarm.label.isEmpty ? "Wake up!" : alarm.label)
+        var attempts: [AlarmKitAttempt] = []
+        for level in AlarmCapabilityLevel.allCases {
+            let configuration = makeConfiguration(
+                for: level,
+                alarm: alarm,
+                schedule: schedule,
+                title: title
+            )
+            do {
+                _ = try await manager.schedule(id: id, configuration: configuration)
+                attempts.append(AlarmKitAttempt(level: level, succeeded: true, errorDetail: nil))
+                return AlarmKitDiagnostics(
+                    permissionLine: permissionLine,
+                    attempts: attempts,
+                    acceptedLevel: level
+                )
+            } catch {
+                Self.logger.error("AlarmKit rejected level \(level.rawValue, privacy: .public) (id: \(alarm.id, privacy: .public)): \(error.localizedDescription, privacy: .public)")
+                attempts.append(AlarmKitAttempt(level: level, succeeded: false, errorDetail: describe(error)))
+            }
+        }
+        return AlarmKitDiagnostics(
+            permissionLine: permissionLine,
+            attempts: attempts,
+            acceptedLevel: nil
+        )
+    }
+
+    /// Apple's sample schedules every alarm as a relative time — one-time with
+    /// `.never`, repeating with the selected weekdays. No date-based schedules.
+    private static func makeSchedule(for alarm: Alarm) -> SystemAlarm.Schedule? {
         let parts = alarm.time.split(separator: ":")
         guard parts.count == 2,
               let hour = Int(parts[0]), (0...23).contains(hour),
               let minute = Int(parts[1]), (0...59).contains(minute) else {
-            throw AlarmScheduleError.invalidTime
+            return nil
         }
-
         let weekdayMap: [String: Locale.Weekday] = [
             "sun": .sunday, "mon": .monday, "tue": .tuesday, "wed": .wednesday,
             "thu": .thursday, "fri": .friday, "sat": .saturday
         ]
         let weekdays = alarm.repeatDays.compactMap { weekdayMap[$0] }
+        let recurrence: SystemAlarm.Schedule.Relative.Recurrence = weekdays.isEmpty ? .never : .weekly(weekdays)
+        return SystemAlarm.Schedule.relative(.init(
+            time: .init(hour: hour, minute: minute),
+            repeats: recurrence
+        ))
+    }
 
-        let schedule: SystemAlarm.Schedule
-        if weekdays.isEmpty {
-            // One-time alarms fire at an exact pre-computed date. Fixed-date
-            // one-shots are what shipping AlarmKit apps register; they remove
-            // any dependence on relative-schedule resolution on the device.
-            guard let fireDate = TimeFormatter.getNextAlarmTime(time: alarm.time, repeatDays: []) else {
-                throw AlarmScheduleError.invalidTime
-            }
-            schedule = .fixed(fireDate)
-        } else {
-            let recurrence: SystemAlarm.Schedule.Relative.Recurrence = .weekly(weekdays)
-            schedule = SystemAlarm.Schedule.relative(.init(
-                time: .init(hour: hour, minute: minute),
-                repeats: recurrence
-            ))
-        }
-
-        let title = LocalizedStringResource(stringLiteral: alarm.label.isEmpty ? "Wake up!" : alarm.label)
+    private static func makeConfiguration(
+        for level: AlarmCapabilityLevel,
+        alarm: Alarm,
+        schedule: SystemAlarm.Schedule,
+        title: LocalizedStringResource
+    ) -> AlarmManager.AlarmConfiguration<AlarmedAlarmMetadata> {
+        let challengeButton = AlarmButton(
+            text: "Challenge",
+            textColor: .white,
+            systemImageName: "brain.head.profile"
+        )
+        // The four-parameter alert initializer (with stopButton) is the
+        // iOS 26.0 API; variants omitting stopButton require iOS 26.1.
         let alert = AlarmPresentation.Alert(
             title: title,
-            stopButton: AlarmButton(text: "Done", textColor: .white, systemImageName: "stop.circle.fill"),
-            secondaryButton: AlarmButton(text: "Challenge", textColor: .white, systemImageName: "brain.head.profile"),
-            secondaryButtonBehavior: .custom
+            stopButton: AlarmButton(
+                text: "Done",
+                textColor: .white,
+                systemImageName: "stop.circle.fill"
+            ),
+            secondaryButton: level == .standardButtons ? nil : challengeButton,
+            secondaryButtonBehavior: level == .standardButtons ? nil : .custom
         )
+
         let attributes = AlarmAttributes<AlarmedAlarmMetadata>(
             presentation: AlarmPresentation(alert: alert),
             metadata: AlarmedAlarmMetadata(alarmId: alarm.id, challengeMode: alarm.dismissalMode),
             tintColor: AppColors.primary
         )
-        let configuration = AlarmManager.AlarmConfiguration(
-            countdownDuration: nil,
-            schedule: schedule,
-            attributes: attributes,
-            stopIntent: OpenChallengeIntent(alarmID: alarm.id),
-            secondaryIntent: OpenChallengeIntent(alarmID: alarm.id),
-            sound: .default
-        )
-        _ = try await manager.schedule(id: id, configuration: configuration)
+
+        switch level {
+        case .fullChallenge:
+            let intent = OpenChallengeIntent(alarmID: alarm.id)
+            return AlarmManager.AlarmConfiguration(
+                countdownDuration: nil,
+                schedule: schedule,
+                attributes: attributes,
+                stopIntent: intent,
+                secondaryIntent: intent,
+                sound: .default
+            )
+        case .challengeOnly:
+            return AlarmManager.AlarmConfiguration(
+                countdownDuration: nil,
+                schedule: schedule,
+                attributes: attributes,
+                secondaryIntent: OpenChallengeIntent(alarmID: alarm.id),
+                sound: .default
+            )
+        case .standardButtons:
+            return AlarmManager.AlarmConfiguration(
+                countdownDuration: nil,
+                schedule: schedule,
+                attributes: attributes,
+                sound: .default
+            )
+        }
+    }
+
+    /// Full NSError context — the bare localizedDescription ("error 1") is
+    /// useless for remote debugging.
+    private static func describe(_ error: Error) -> String {
+        let nsError = error as NSError
+        var detail = "code \(nsError.code), domain \(nsError.domain)"
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+            detail += " (underlying: code \(underlying.code), domain \(underlying.domain))"
+        }
+        return "\(detail) — \(error.localizedDescription)"
     }
 
     /// Observes AlarmKit alarm state changes. When one of our alarms starts

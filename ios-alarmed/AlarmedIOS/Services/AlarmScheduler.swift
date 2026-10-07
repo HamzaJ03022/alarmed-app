@@ -20,10 +20,18 @@ protocol AlarmScheduling {
     /// (e.g. after an app update or reboot). No-op for schedulers that cannot
     /// enumerate their registrations.
     func reconcile(alarms: [Alarm]) async
+
+    /// Registers a throwaway test alarm to report exactly what the system
+    /// accepts and rejects. Used by the Settings "Run AlarmKit check" button.
+    func runDiagnostics() async -> String
 }
 
 extension AlarmScheduling {
     func reconcile(alarms: [Alarm]) async {}
+
+    func runDiagnostics() async -> String {
+        "The alarm engine check runs on iOS 26 and later."
+    }
 }
 
 /// Outcome of one scheduling attempt, used for the Settings diagnostics.
@@ -31,6 +39,8 @@ struct AlarmScheduleResult {
     var alarmKitError: String?
     var fallbackError: String?
     var usedAlarmKit: Bool
+    /// Full multi-line registration report (levels tried, real error codes).
+    var detail: String? = nil
 
     var isSuccess: Bool { alarmKitError == nil && fallbackError == nil }
 }

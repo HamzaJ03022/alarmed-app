@@ -93,6 +93,34 @@ struct SettingsView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppColors.textSecondary)
             }
+
+            Button(action: { viewModel.runAlarmKitCheck() }) {
+                HStack(spacing: 8) {
+                    if viewModel.isRunningCheck {
+                        ProgressView()
+                            .tint(AppColors.primary)
+                        Text("Running check...")
+                    } else {
+                        Image(systemName: "waveform.path.ecg")
+                        Text("Run AlarmKit check")
+                    }
+                    Spacer()
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppColors.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(AppColors.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isRunningCheck)
+
+            if let check = viewModel.alarmCheckResult {
+                Text(check)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppColors.textSecondary)
+                    .lineSpacing(2)
+            }
         }
         .padding(18)
         .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))

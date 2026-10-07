@@ -24,6 +24,9 @@ final class AlarmsViewModel {
     var alarmScheduleStatus: String? = nil
     /// Alarms currently registered with the system scheduler, when exposed.
     var systemAlarmCount: Int? = nil
+    /// Output of the last "Run AlarmKit check" tap (Settings diagnostics).
+    var alarmCheckResult: String? = nil
+    var isRunningCheck: Bool = false
 
     private let storage = UserDefaults.standard
     private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()
@@ -231,7 +234,27 @@ final class AlarmsViewModel {
         }
     }
 
+    /// One-tap alarm engine check: registers a throwaway test alarm through
+    /// the capability ladder and reports which level the system accepts.
+    func runAlarmKitCheck() {
+        guard !isRunningCheck else { return }
+        isRunningCheck = true
+        alarmCheckResult = nil
+        Task {
+            let result = await scheduler.runDiagnostics()
+            systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+            alarmCheckResult = result
+            isRunningCheck = false
+        }
+    }
+
     private static func describe(_ result: AlarmScheduleResult, time: String) -> String {
+        if let detail = result.detail {
+            if let fallback = result.fallbackError {
+                return detail + "\nNotification fallback also failed: \(fallback)."
+            }
+            return detail
+        }
         if let fallback = result.fallbackError {
             let reason = result.alarmKitError ?? "scheduling error"
             return "Could not schedule \(time): \(reason). Notification fallback also failed: \(fallback)."
