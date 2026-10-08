@@ -76,6 +76,11 @@ struct AlarmKitScheduler: AlarmScheduling {
 
     private static let logger = Logger(subsystem: "com.nyytech.alarmed", category: "AlarmKit")
 
+    /// Single-flight permission requests: reconcile-on-launch, alarm edits and
+    /// the manual check all run on the main actor, so a plain static Task slot
+    /// safely shares one in-flight request between them.
+    private static var inFlightAuthorization: Task<AlarmManager.AuthorizationState, Error>?
+
     func schedule(_ alarm: Alarm) async -> AlarmScheduleResult {
         guard alarm.isActive else {
             return AlarmScheduleResult(alarmKitError: nil, fallbackError: nil, usedAlarmKit: false)
@@ -154,38 +159,43 @@ struct AlarmKitScheduler: AlarmScheduling {
     private static func registerWithAlarmKit(_ alarm: Alarm, id: UUID) async -> AlarmKitDiagnostics {
         let manager = AlarmManager.shared
 
-        switch manager.authorizationState {
-        case .notDetermined:
-            do {
-                let state = try await manager.requestAuthorization()
-                guard state == .authorized else {
-                    return AlarmKitDiagnostics(
-                        permissionLine: "Permission: the system returned \(String(describing: state)) after the prompt.",
-                        attempts: [],
-                        acceptedLevel: nil
-                    )
-                }
-            } catch {
-                return AlarmKitDiagnostics(
-                    permissionLine: "Permission request failed — \(describe(error))",
-                    attempts: [],
-                    acceptedLevel: nil
-                )
-            }
-        case .denied:
+        // Ground truth first: the raw state string ends up in the Settings
+        // card, so a state this SDK does not recognize is visible instead of
+        // silently blocking registration.
+        let rawState = String(describing: manager.authorizationState)
+
+        // Only a documented .denied stops registration. Every other state —
+        // including ones this SDK version does not know — goes straight to the
+        // system: schedule() can still trigger the permission prompt itself,
+        // and whatever the system answers becomes the visible diagnostic.
+        if manager.authorizationState == .denied {
             return AlarmKitDiagnostics(
                 permissionLine: "Permission: denied — turn on Alarms for Alarmed in the Settings app, then recreate the alarm.",
                 attempts: [],
                 acceptedLevel: nil
             )
-        @unknown default:
-            return AlarmKitDiagnostics(
-                permissionLine: "Permission: unknown system state.",
-                attempts: [],
-                acceptedLevel: nil
-            )
         }
-        let permissionLine = "Permission: authorized."
+
+        var permissionLine = "Permission: system reports \(rawState)."
+        if manager.authorizationState == .notDetermined {
+            do {
+                let state = try await requestAuthorizationSingleFlight()
+                if manager.authorizationState == .denied {
+                    return AlarmKitDiagnostics(
+                        permissionLine: "Permission: the prompt was declined — turn on Alarms for Alarmed in the Settings app, then recreate the alarm.",
+                        attempts: [],
+                        acceptedLevel: nil
+                    )
+                }
+                permissionLine = state == .authorized
+                    ? "Permission: authorized."
+                    : "Permission: system returned \(String(describing: state)) after the prompt."
+            } catch {
+                // A failed prompt request no longer blocks registration — the
+                // system may still accept a direct schedule() call.
+                permissionLine = "Permission: request failed (\(describe(error))) — attempting registration anyway."
+            }
+        }
 
         guard let schedule = makeSchedule(for: alarm) else {
             return AlarmKitDiagnostics(
@@ -306,6 +316,35 @@ struct AlarmKitScheduler: AlarmScheduling {
                 sound: .default
             )
         }
+    }
+
+    /// Shares one in-flight permission request across reconcile-on-launch,
+    /// alarm edits and the manual check instead of letting them race.
+    private static func requestAuthorizationSingleFlight() async throws -> AlarmManager.AuthorizationState {
+        if let inFlight = inFlightAuthorization {
+            return try await inFlight.value
+        }
+        let task = Task { try await AlarmManager.shared.requestAuthorization() }
+        inFlightAuthorization = task
+        defer { inFlightAuthorization = nil }
+        return try await task.value
+    }
+
+    /// Ground-truth lines for the Settings card so every screenshot pins down
+    /// the exact binary: build number, embedded permission text, bundled tone,
+    /// and the raw permission state.
+    func groundTruthLines() -> [String] {
+        var lines = AlarmBundleFacts.lines
+        if let raw = rawPermissionStateLine() {
+            lines.append(raw)
+        }
+        return lines
+    }
+
+    /// The permission state exactly as the system reports it — including
+    /// states this SDK version does not know.
+    func rawPermissionStateLine() -> String? {
+        "System permission state: \(String(describing: AlarmManager.shared.authorizationState))"
     }
 
     /// Full NSError context — the bare localizedDescription ("error 1") is

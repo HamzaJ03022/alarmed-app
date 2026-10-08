@@ -24,6 +24,14 @@ protocol AlarmScheduling {
     /// Registers a throwaway test alarm to report exactly what the system
     /// accepts and rejects. Used by the Settings "Run AlarmKit check" button.
     func runDiagnostics() async -> String
+
+    /// Ground-truth lines for the Settings diagnostics card: build number,
+    /// embedded permission text, bundled tone (plus permission state when the
+    /// scheduler exposes it).
+    func groundTruthLines() -> [String]
+
+    /// Raw permission state reported by the system, when exposed.
+    func rawPermissionStateLine() -> String?
 }
 
 extension AlarmScheduling {
@@ -31,6 +39,32 @@ extension AlarmScheduling {
 
     func runDiagnostics() async -> String {
         "The alarm engine check runs on iOS 26 and later."
+    }
+
+    func groundTruthLines() -> [String] {
+        AlarmBundleFacts.lines
+    }
+
+    func rawPermissionStateLine() -> String? { nil }
+}
+
+/// Facts about the installed bundle that disambiguate any future diagnostic
+/// screenshot: which build is installed and whether the two critical
+/// resources (permission text, alarm tone) actually shipped in it.
+enum AlarmBundleFacts {
+    static var lines: [String] {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+        var lines = ["App version \(version), build \(build)"]
+        if Bundle.main.object(forInfoDictionaryKey: "NSAlarmKitUsageDescription") != nil {
+            lines.append("Alarm permission text embedded: yes")
+        } else {
+            lines.append("Alarm permission text embedded: NO — this build cannot register system alarms")
+        }
+        lines.append(AlarmSoundTester.isToneBundled
+            ? "Alarm tone bundled: yes"
+            : "Alarm tone bundled: NO — the notification fallback would be silent")
+        return lines
     }
 }
 

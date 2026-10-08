@@ -27,9 +27,17 @@ final class AlarmsViewModel {
     /// Output of the last "Run AlarmKit check" tap (Settings diagnostics).
     var alarmCheckResult: String? = nil
     var isRunningCheck: Bool = false
+    /// Ground-truth lines about the installed build (Settings diagnostics).
+    var alarmGroundTruth: [String] = []
+    /// Raw system permission state, when the scheduler exposes it.
+    var rawPermissionState: String? = nil
+    /// Status line from the last "Play test sound" tap.
+    var testSoundStatus: String? = nil
+    var isPlayingTestSound: Bool = false
 
     private let storage = UserDefaults.standard
     private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()
+    private let soundTester = AlarmSoundTester()
 
     init() {
         load()
@@ -225,12 +233,37 @@ final class AlarmsViewModel {
     private func scheduleAndRecord(_ alarm: Alarm) async {
         let result = await scheduler.schedule(alarm)
         systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+        rawPermissionState = scheduler.rawPermissionStateLine()
         alarmScheduleStatus = Self.describe(result, time: alarm.time)
     }
 
-    func refreshSystemAlarmCount() {
+    /// Refreshes the Settings card ground truth: installed build, embedded
+    /// resources, raw permission state and registered system alarms.
+    func refreshEngineDiagnostics() {
         Task {
+            alarmGroundTruth = scheduler.groundTruthLines()
+            rawPermissionState = scheduler.rawPermissionStateLine()
             systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+        }
+    }
+
+    /// Plays the bundled alarm tone so the sound path can be verified on the
+    /// device independently of the alarm engine. Tapping again stops playback;
+    /// playback also auto-stops after a few seconds.
+    func playTestSound() {
+        if isPlayingTestSound {
+            soundTester.stop()
+            isPlayingTestSound = false
+            return
+        }
+        isPlayingTestSound = true
+        testSoundStatus = soundTester.playTestSound()
+        Task {
+            try? await Task.sleep(for: .seconds(6))
+            if isPlayingTestSound {
+                soundTester.stop()
+                isPlayingTestSound = false
+            }
         }
     }
 
@@ -243,6 +276,8 @@ final class AlarmsViewModel {
         Task {
             let result = await scheduler.runDiagnostics()
             systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+            rawPermissionState = scheduler.rawPermissionStateLine()
+            alarmGroundTruth = scheduler.groundTruthLines()
             alarmCheckResult = result
             isRunningCheck = false
         }

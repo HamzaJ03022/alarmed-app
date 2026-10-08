@@ -88,6 +88,21 @@ struct SettingsView: View {
                     .lineSpacing(2)
             }
 
+            if !viewModel.alarmGroundTruth.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(viewModel.alarmGroundTruth, id: \.self) { line in
+                        Text(line)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
+                    if let raw = viewModel.rawPermissionState {
+                        Text(raw)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
+                }
+            }
+
             if let count = viewModel.systemAlarmCount {
                 Text("Registered system alarms: \(count)")
                     .font(.caption.weight(.semibold))
@@ -124,7 +139,7 @@ struct SettingsView: View {
         }
         .padding(18)
         .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
-        .task { viewModel.refreshSystemAlarmCount() }
+        .task { viewModel.refreshEngineDiagnostics() }
     }
 
     private var alarmSettingsCard: some View {
@@ -141,6 +156,27 @@ struct SettingsView: View {
                     set: { viewModel.soundEnabled = $0 }
                 )
             )
+
+            Button(action: { viewModel.playTestSound() }) {
+                HStack(spacing: 8) {
+                    Image(systemName: viewModel.isPlayingTestSound ? "stop.fill" : "play.fill")
+                    Text(viewModel.isPlayingTestSound ? "Stop test sound" : "Play test sound")
+                    Spacer()
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppColors.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(AppColors.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            if let status = viewModel.testSoundStatus {
+                Text(status)
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .lineSpacing(2)
+            }
 
             VStack(spacing: 12) {
                 HStack {
