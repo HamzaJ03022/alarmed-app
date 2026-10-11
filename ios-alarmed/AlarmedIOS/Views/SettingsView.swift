@@ -12,6 +12,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     warningCard
+                    loudnessTipCard
 
                     alarmEngineCard
                     alarmSettingsCard
@@ -67,6 +68,71 @@ struct SettingsView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.warning, lineWidth: 1))
     }
 
+    /// The lock-screen alarm plays at the system "Ringtone & Alerts" volume,
+    /// which no app can raise — this one-time setup makes it loud and stops
+    /// the volume buttons from lowering it overnight.
+    private var loudnessTipCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.body)
+                    .foregroundStyle(AppColors.primary)
+                Text("Make your alarm loud")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(AppColors.text)
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                tipStep(number: 1, text: "Open Settings → Sounds & Haptics and drag \"Ringtone & Alerts\" all the way up.")
+                tipStep(number: 2, text: "Turn off \"Change with Buttons\" so the volume buttons can't lower your alarm overnight.")
+            }
+
+            Text("Silencing a ringing alarm with the side or volume buttons only pauses it — it rings again every minute until you solve the challenge.")
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .lineSpacing(2)
+
+            Button(action: openSystemSettings) {
+                HStack(spacing: 8) {
+                    Image(systemName: "gearshape.fill")
+                    Text("Open Settings")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppColors.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(AppColors.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(18)
+        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.primary.opacity(0.35), lineWidth: 1))
+    }
+
+    private func tipStep(number: Int, text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text("\(number)")
+                .font(.caption.weight(.heavy))
+                .foregroundStyle(AppColors.background)
+                .frame(width: 22, height: 22)
+                .background(AppColors.primary, in: Circle())
+            Text(text)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(AppColors.text)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
     /// Live scheduling diagnostics — surfaces AlarmKit registration results
     /// that used to fail silently.
     private var alarmEngineCard: some View {
@@ -104,7 +170,7 @@ struct SettingsView: View {
             }
 
             if let count = viewModel.systemAlarmCount {
-                Text("Registered system alarms: \(count)")
+                Text("Registered system alarms: \(count) (each alarm + its re-ring backups)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppColors.textSecondary)
             }
@@ -148,14 +214,22 @@ struct SettingsView: View {
                 .font(.title2.weight(.bold))
                 .foregroundStyle(AppColors.text)
 
-            settingToggle(
-                icon: "speaker.wave.2.fill",
-                title: "Sound",
-                isOn: Binding(
-                    get: { viewModel.soundEnabled },
-                    set: { viewModel.soundEnabled = $0 }
-                )
-            )
+            HStack(spacing: 14) {
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.body)
+                    .foregroundStyle(AppColors.primary)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Alarm volume: always max")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(AppColors.text)
+                    Text("Locked at full volume until the challenge is solved")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 6)
 
             Button(action: { viewModel.playTestSound() }) {
                 HStack(spacing: 8) {
@@ -176,48 +250,6 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(AppColors.textSecondary)
                     .lineSpacing(2)
-            }
-
-            VStack(spacing: 12) {
-                HStack {
-                    Image(systemName: "speaker.slash.fill")
-                        .font(.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                    Image(systemName: "speaker.wave.3.fill")
-                        .font(.body)
-                        .foregroundStyle(AppColors.primary)
-                    Spacer()
-                    Text("\(Int(viewModel.volume * 100))%")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-                .padding(.horizontal, 8)
-
-                Slider(value: Binding(
-                    get: { viewModel.volume },
-                    set: { viewModel.volume = $0 }
-                ), in: 0.3...1.0, step: 0.1)
-                .tint(AppColors.primary)
-            }
-
-            VStack(spacing: 0) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Crescendo Alarm")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(AppColors.text)
-                        Text("Gradually increase volume over time")
-                            .font(.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { viewModel.crescendoEnabled },
-                        set: { viewModel.crescendoEnabled = $0 }
-                    ))
-                    .tint(AppColors.primary)
-                    .labelsHidden()
-                }
             }
 
             settingToggle(

@@ -32,6 +32,15 @@ protocol AlarmScheduling {
 
     /// Raw permission state reported by the system, when exposed.
     func rawPermissionStateLine() -> String?
+
+    /// The wake-up challenge was solved: silence anything still ringing for
+    /// this alarm, clear its re-ring backups, and (for repeating alarms) arm
+    /// fresh backups for the next occurrence.
+    func challengeSolved(_ alarm: Alarm) async
+
+    /// Stops a system alert that is ringing while the in-app challenge is on
+    /// screen and already playing the alarm tone itself.
+    func silenceSystemAlert(systemId: String) async
 }
 
 extension AlarmScheduling {
@@ -46,6 +55,62 @@ extension AlarmScheduling {
     }
 
     func rawPermissionStateLine() -> String? { nil }
+
+    func challengeSolved(_ alarm: Alarm) async {}
+
+    func silenceSystemAlert(systemId: String) async {}
+}
+
+/// Deterministic IDs for the re-ring backups that follow every alarm. Each
+/// backup ID is the alarm's UUID with its last byte XOR-ed by the backup
+/// index, so backups can be found, cancelled and mapped back to their alarm
+/// without storing anything.
+enum AlarmBackupIds {
+    /// Backup rings per alarm — one per minute after the alarm time.
+    static let count = 15
+
+    static func ids(for alarmId: String) -> [UUID] {
+        guard let base = UUID(uuidString: alarmId) else { return [] }
+        return (1...count).map { index in
+            var bytes = base.uuid
+            bytes.15 ^= UInt8(index)
+            return UUID(uuid: bytes)
+        }
+    }
+
+    /// Resolves a system alarm ID (the alarm itself or one of its backups)
+    /// to the app alarm it belongs to.
+    static func parentAlarmId(for systemId: String, among alarms: [Alarm]) -> String? {
+        if alarms.contains(where: { $0.id == systemId }) { return systemId }
+        guard let uuid = UUID(uuidString: systemId) else { return nil }
+        return alarms.first(where: { ids(for: $0.id).contains(uuid) })?.id
+    }
+
+    /// Next time the alarm will fire strictly after `date`, honoring its
+    /// repeat days. Used to anchor the backup rings.
+    static func nextOccurrence(of alarm: Alarm, after date: Date) -> Date? {
+        let parts = alarm.time.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]), (0...23).contains(hour),
+              let minute = Int(parts[1]), (0...59).contains(minute) else {
+            return nil
+        }
+        let weekdayNumbers: [String: Int] = [
+            "sun": 1, "mon": 2, "tue": 3, "wed": 4, "thu": 5, "fri": 6, "sat": 7
+        ]
+        let allowed = Set(alarm.repeatDays.compactMap { weekdayNumbers[$0] })
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: date)
+        for dayOffset in 0...8 {
+            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday),
+                  let candidate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day),
+                  candidate > date else { continue }
+            if allowed.isEmpty || allowed.contains(calendar.component(.weekday, from: candidate)) {
+                return candidate
+            }
+        }
+        return nil
+    }
 }
 
 /// Facts about the installed bundle that disambiguate any future diagnostic
@@ -62,8 +127,8 @@ enum AlarmBundleFacts {
             lines.append("Alarm permission text embedded: NO — this build cannot register system alarms")
         }
         lines.append(AlarmSoundTester.isToneBundled
-            ? "Alarm tone bundled: yes"
-            : "Alarm tone bundled: NO — the notification fallback would be silent")
+            ? "Loud alarm tone bundled: yes"
+            : "Loud alarm tone bundled: NO — alarms would use the quiet default tone")
         return lines
     }
 }

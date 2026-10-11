@@ -20,7 +20,7 @@ struct AlarmedIOSApp: App {
                     NotificationCenter.default.publisher(for: .alarmTriggered)
                 ) { notification in
                     if let alarmId = notification.userInfo?["alarmId"] as? String {
-                        viewModel.activeAlarmId = alarmId
+                        viewModel.handleAlarmTriggered(systemId: alarmId)
                     }
                 }
                 .task {
@@ -33,9 +33,7 @@ struct AlarmedIOSApp: App {
                     // route straight to the ringing screen with the challenge.
                     if let pending = UserDefaults.standard.string(forKey: AlarmedPendingAlarm.key) {
                         UserDefaults.standard.removeObject(forKey: AlarmedPendingAlarm.key)
-                        if viewModel.alarms.contains(where: { $0.id == pending }) {
-                            viewModel.activeAlarmId = pending
-                        }
+                        viewModel.handleAlarmTriggered(systemId: pending)
                     }
                 }
         }

@@ -7,28 +7,29 @@ import Foundation
 final class AlarmSoundTester {
     private var player: AVAudioPlayer?
 
-    /// Whether the alarm tone actually shipped in this build's resources.
-    static let isToneBundled: Bool = {
-        Bundle.main.url(forResource: "alarm", withExtension: "caf") != nil
-    }()
+    /// The loudness-maximized tone used by the lock-screen alarm, the
+    /// in-app challenge and the notification fallback.
+    static let toneURL: URL? = Bundle.main.url(forResource: "alarm_loud", withExtension: "caf")
 
-    /// Plays the bundled alarm.caf. Returns a user-readable status line for
+    /// Whether the alarm tone actually shipped in this build's resources.
+    static let isToneBundled: Bool = toneURL != nil
+
+    /// Plays the bundled loud tone. Returns a user-readable status line for
     /// the Settings card.
     func playTestSound() -> String {
-        guard Self.isToneBundled,
-              let url = Bundle.main.url(forResource: "alarm", withExtension: "caf") else {
-            return "Test sound failed — alarm.caf is not bundled in this build."
+        guard let url = Self.toneURL else {
+            return "Test sound failed — alarm_loud.caf is not bundled in this build."
         }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, options: [.duckOthers])
             try session.setActive(true)
             let newPlayer = try AVAudioPlayer(contentsOf: url)
-            newPlayer.numberOfLoops = 2
+            newPlayer.numberOfLoops = 0
             newPlayer.volume = 1.0
             newPlayer.play()
             player = newPlayer
-            return "Playing the alarm tone now. If you hear nothing, check the ringer switch and volume."
+            return "Playing the alarm tone now. The lock-screen alarm plays at your \"Ringtone & Alerts\" volume — set it to max using the tip above."
         } catch {
             return "Test sound failed — \(error.localizedDescription)"
         }

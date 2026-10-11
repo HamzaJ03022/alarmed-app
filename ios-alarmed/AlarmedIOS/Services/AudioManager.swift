@@ -1,50 +1,51 @@
 import AudioToolbox
 import AVFoundation
 
+/// In-app alarm playback for the challenge screen. A real alarm always plays
+/// the loud tone at full player volume — no fade-in, no in-app volume cap —
+/// while `SystemVolumeLock` holds the device volume at maximum.
 final class AudioManager: @unchecked Sendable {
     static let shared = AudioManager()
     private var player: AVAudioPlayer?
-    private var volumeTimer: Timer?
     private var vibrationTimer: Timer?
 
-    private init() {
-        configureSession()
-    }
+    private init() {}
 
-    private func configureSession() {
+    private func activateSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(
-                .playback,
-                mode: .default,
-                options: []
-            )
-            try AVAudioSession.sharedInstance().setActive(true)
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true)
         } catch {
-            print("Audio session error: \(error)")
+            print("Audio session error: \(error.localizedDescription)")
         }
     }
 
-    func playAlarm(volume: Double, crescendo: Bool, vibrate: Bool = true) {
-        guard let url = Bundle.main.url(forResource: "alarm", withExtension: "mp3") else {
-            print("Alarm sound not found, playing system sound")
+    /// Starts the looping alarm at full volume. Safe to call again (e.g. when
+    /// returning to the foreground): it only restarts playback if stopped.
+    func playAlarm(vibrate: Bool = true) {
+        activateSession()
+        if let player, player.isPlaying {
+            if vibrate && vibrationTimer == nil { startVibration() }
+            return
+        }
+        guard let url = AlarmSoundTester.toneURL
+            ?? Bundle.main.url(forResource: "alarm", withExtension: "mp3") else {
             playSystemAlarm()
+            if vibrate { startVibration() }
             return
         }
         do {
-            player = try AVAudioPlayer(contentsOf: url)
-            player?.numberOfLoops = -1
-            if crescendo {
-                player?.volume = 0.3
-            } else {
-                player?.volume = Float(volume)
-            }
-            player?.play()
-            if crescendo { startCrescendo(targetVolume: volume) }
-            if vibrate { startVibration() }
+            let newPlayer = try AVAudioPlayer(contentsOf: url)
+            newPlayer.numberOfLoops = -1
+            newPlayer.volume = 1.0
+            newPlayer.play()
+            player = newPlayer
         } catch {
-            print("Audio player error: \(error)")
+            print("Audio player error: \(error.localizedDescription)")
             playSystemAlarm()
         }
+        if vibrate { startVibration() }
     }
 
     /// Repeating device vibration while the alarm rings in-app. Uses the
@@ -57,21 +58,6 @@ final class AudioManager: @unchecked Sendable {
         }
     }
 
-    private func startCrescendo(targetVolume: Double) {
-        volumeTimer?.invalidate()
-        volumeTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self, let player = self.player else {
-                timer.invalidate(); return
-            }
-            let newVolume = min(player.volume + 0.05, Float(targetVolume))
-            player.volume = newVolume
-            if newVolume >= Float(targetVolume) {
-                timer.invalidate()
-                self.volumeTimer = nil
-            }
-        }
-    }
-
     private func playSystemAlarm() {
         AudioServicesPlayAlertSound(1005)
     }
@@ -79,11 +65,7 @@ final class AudioManager: @unchecked Sendable {
     func stop() {
         player?.stop()
         player = nil
-        volumeTimer?.invalidate()
-        volumeTimer = nil
         vibrationTimer?.invalidate()
         vibrationTimer = nil
     }
-
-    var currentVolume: Float { player?.volume ?? 0 }
 }

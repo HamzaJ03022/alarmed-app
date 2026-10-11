@@ -109,6 +109,33 @@ final class AlarmsViewModel {
         activeAlarmId = id
     }
 
+    /// A system alarm (the alarm itself or one of its re-ring backups) fired
+    /// or its Challenge button was tapped. Routes to the challenge screen for
+    /// the owning alarm. When the app is in the foreground the challenge
+    /// screen plays the tone itself, so the system alert is silenced to avoid
+    /// a double alarm — the backups stay armed until the challenge is solved.
+    func handleAlarmTriggered(systemId: String) {
+        guard let parentId = AlarmBackupIds.parentAlarmId(for: systemId, among: alarms) else { return }
+        activeAlarmId = parentId
+        if UIApplication.shared.applicationState == .active {
+            Task { await scheduler.silenceSystemAlert(systemId: systemId) }
+        }
+    }
+
+    /// Questions answered or phrase completed: the only path that clears the
+    /// re-ring backups. One-time alarms are disarmed immediately so a crash
+    /// on the quote screen can't leave them armed for tomorrow.
+    func challengeSolved(_ alarm: Alarm) {
+        let current = alarms.first(where: { $0.id == alarm.id }) ?? alarm
+        Task {
+            await scheduler.challengeSolved(current)
+            if current.repeatDays.isEmpty {
+                updateAlarm(id: current.id, with: PartialAlarmUpdate(isActive: false))
+            }
+            systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+        }
+    }
+
     func completeOnboarding(mode: String, phrase: String) {
         hasSeenOnboarding = true
         defaultChallengeMode = mode

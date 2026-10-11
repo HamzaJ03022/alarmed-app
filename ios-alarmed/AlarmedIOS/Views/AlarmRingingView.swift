@@ -3,13 +3,13 @@ import SwiftUI
 struct AlarmRingingView: View {
     let alarm: Alarm
     @Environment(AlarmsViewModel.self) private var viewModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var questions: [Question] = []
     @State private var currentQuestionIndex = 0
     @State private var correctAnswers = 0
     @State private var snoozeCount = 0
     @State private var completed = false
     @State private var selectedQuote = ""
-    @State private var currentVolume: Double = 0.5
     @State private var alarmTime = ""
 
     private let timeLimit = 90
@@ -46,7 +46,21 @@ struct AlarmRingingView: View {
                 }
             }
         }
+        .background {
+            SystemVolumeLockHost()
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
         .onAppear { startAlarm() }
+        .onDisappear { SystemVolumeLock.shared.disengage() }
+        .onChange(of: scenePhase) { _, phase in
+            // Leaving the app pauses in-app audio (the re-ring backups keep
+            // ringing on the lock screen); coming back resumes full volume.
+            if phase == .active && !completed {
+                startRinging()
+            }
+        }
     }
 
     private var headerSection: some View {
@@ -59,24 +73,10 @@ struct AlarmRingingView: View {
                 .font(.title3)
                 .foregroundStyle(AppColors.textSecondary)
 
-            if viewModel.crescendoEnabled {
-                VStack(spacing: 4) {
-                    Text("Volume: \(Int(currentVolume * 100))%")
-                        .font(.caption)
-                        .foregroundStyle(AppColors.primary)
-                    GeometryReader { geo in
-                        Capsule()
-                            .fill(AppColors.border)
-                            .overlay(alignment: .leading) {
-                                Capsule()
-                                    .fill(AppColors.primary)
-                                    .frame(width: geo.size.width * currentVolume)
-                            }
-                    }
-                    .frame(height: 6)
-                }
-                .padding(.horizontal, 60)
-            }
+            Label("Volume locked at max until solved", systemImage: "speaker.wave.3.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppColors.primary)
+                .padding(.top, 4)
         }
         .padding(.top, 80)
     }
@@ -133,30 +133,23 @@ struct AlarmRingingView: View {
         let quotes = viewModel.quotes
         selectedQuote = quotes.randomElement() ?? "Rise and shine! Today is full of possibilities."
 
-        let shouldVibrate = viewModel.vibrationEnabled && alarm.vibrate
-        if viewModel.soundEnabled {
-            AudioManager.shared.playAlarm(
-                volume: viewModel.volume,
-                crescendo: viewModel.crescendoEnabled,
-                vibrate: shouldVibrate
-            )
-        } else if shouldVibrate {
-            AudioManager.shared.startVibration()
-        }
-
-        if viewModel.crescendoEnabled {
-            startCrescendoMonitor()
-        }
+        startRinging()
     }
 
-    private func startCrescendoMonitor() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            let vol = Double(AudioManager.shared.currentVolume)
-            currentVolume = vol
-            if vol >= viewModel.volume {
-                timer.invalidate()
-            }
-        }
+    /// A real alarm always rings at full volume: no fade-in, no in-app volume
+    /// cap, no mute — and the device volume is locked at max until solved.
+    private func startRinging() {
+        guard !completed else { return }
+        AudioManager.shared.playAlarm(vibrate: viewModel.vibrationEnabled && alarm.vibrate)
+        SystemVolumeLock.shared.engage()
+    }
+
+    /// The only way the alarm stops: questions answered or phrase completed.
+    private func challengeSolved() {
+        AudioManager.shared.stop()
+        SystemVolumeLock.shared.disengage()
+        viewModel.challengeSolved(alarm)
+        completed = true
     }
 
     private func handleAnswer(_ isCorrect: Bool) {
@@ -164,8 +157,7 @@ struct AlarmRingingView: View {
             HapticManager.successNotification()
             correctAnswers += 1
             if correctAnswers >= alarm.questionCount {
-                AudioManager.shared.stop()
-                completed = true
+                challengeSolved()
                 return
             }
         } else {
@@ -190,8 +182,7 @@ struct AlarmRingingView: View {
 
     private func handlePhraseCorrect() {
         HapticManager.successNotification()
-        AudioManager.shared.stop()
-        completed = true
+        challengeSolved()
     }
 
     private func finishAlarm() {

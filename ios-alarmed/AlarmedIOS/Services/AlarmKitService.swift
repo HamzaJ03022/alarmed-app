@@ -81,6 +81,11 @@ struct AlarmKitScheduler: AlarmScheduling {
     /// safely shares one in-flight request between them.
     private static var inFlightAuthorization: Task<AlarmManager.AuthorizationState, Error>?
 
+    /// Loudness-maximized tone (compressed + limited, presence boost, 29s —
+    /// under the 30s system sound limit). The extension is required or the
+    /// system silently falls back to the quiet default tone.
+    static let toneFileName = "alarm_loud.caf"
+
     func schedule(_ alarm: Alarm) async -> AlarmScheduleResult {
         guard alarm.isActive else {
             return AlarmScheduleResult(alarmKitError: nil, fallbackError: nil, usedAlarmKit: false)
@@ -89,11 +94,12 @@ struct AlarmKitScheduler: AlarmScheduling {
         let diagnostics = await Self.registerWithAlarmKit(alarm, id: kitId)
         if let accepted = diagnostics.acceptedLevel {
             Self.logger.info("AlarmKit alarm registered (id: \(alarm.id, privacy: .public)) at level \(accepted.rawValue, privacy: .public)")
+            let backups = await Self.scheduleBackups(for: alarm, preferredLevel: accepted)
             return AlarmScheduleResult(
                 alarmKitError: nil,
                 fallbackError: nil,
                 usedAlarmKit: true,
-                detail: diagnostics.summary()
+                detail: diagnostics.summary() + "\n" + backups.summary
             )
         }
         Self.logger.error("AlarmKit rejected all levels (id: \(alarm.id, privacy: .public))")
@@ -117,6 +123,7 @@ struct AlarmKitScheduler: AlarmScheduling {
         NotificationManager.shared.cancelAlarm(id: id)
         let uuid = UUID(uuidString: id) ?? UUID()
         try? await AlarmManager.shared.cancel(id: uuid)
+        await Self.cancelBackups(for: id)
     }
 
     func registeredSystemAlarmCount() async -> Int? {
@@ -128,10 +135,43 @@ struct AlarmKitScheduler: AlarmScheduling {
     /// this idempotent — no cancel/churn for alarms that are already live.
     func reconcile(alarms: [Alarm]) async {
         guard let scheduled = try? AlarmManager.shared.alarms else { return }
-        let scheduledIds = Set(scheduled.map(\.id.uuidString))
-        for alarm in alarms where alarm.isActive && !scheduledIds.contains(alarm.id) {
-            _ = await schedule(alarm)
+        let scheduledIds = Set(scheduled.map(\.id))
+        for alarm in alarms where alarm.isActive {
+            guard let mainId = UUID(uuidString: alarm.id), scheduledIds.contains(mainId) else {
+                _ = await schedule(alarm)
+                continue
+            }
+            // Backups still pending (e.g. mid-window, challenge unsolved) are
+            // left alone; only a fully missing set is re-armed for the next
+            // occurrence.
+            let backupIds = AlarmBackupIds.ids(for: alarm.id)
+            if !backupIds.contains(where: { scheduledIds.contains($0) }) {
+                _ = await Self.scheduleBackups(for: alarm, preferredLevel: .fullChallenge)
+            }
         }
+    }
+
+    func challengeSolved(_ alarm: Alarm) async {
+        let backupIds = AlarmBackupIds.ids(for: alarm.id)
+        var related = Set(backupIds)
+        if let mainId = UUID(uuidString: alarm.id) { related.insert(mainId) }
+        if let current = try? AlarmManager.shared.alarms {
+            for systemAlarm in current where related.contains(systemAlarm.id) && systemAlarm.state == .alerting {
+                try? await AlarmManager.shared.stop(id: systemAlarm.id)
+            }
+        }
+        await Self.cancelBackups(for: alarm.id)
+        if alarm.isActive && !alarm.repeatDays.isEmpty {
+            let backups = await Self.scheduleBackups(for: alarm, preferredLevel: .fullChallenge)
+            Self.logger.info("Challenge solved (id: \(alarm.id, privacy: .public)); next backups: \(backups.registered, privacy: .public)")
+        }
+    }
+
+    func silenceSystemAlert(systemId: String) async {
+        guard let uuid = UUID(uuidString: systemId),
+              let current = try? AlarmManager.shared.alarms,
+              current.contains(where: { $0.id == uuid && $0.state == .alerting }) else { return }
+        try? await AlarmManager.shared.stop(id: uuid)
     }
 
     /// One-tap check from Settings: registers a throwaway alarm about two
@@ -238,6 +278,65 @@ struct AlarmKitScheduler: AlarmScheduling {
         )
     }
 
+    // MARK: - Re-ring backups
+
+    struct BackupOutcome {
+        var registered: Int
+        var lastError: String?
+
+        var summary: String {
+            var line = "Re-ring backups: \(registered) of \(AlarmBackupIds.count) armed (one per minute until the challenge is solved)."
+            if let error = lastError, registered < AlarmBackupIds.count {
+                line += "\nBackup rejected: \(error)"
+            }
+            return line
+        }
+    }
+
+    /// Arms one-shot backup alarms at +1…+15 minutes after the alarm's next
+    /// occurrence. Silencing the alarm with the side or volume buttons only
+    /// buys a minute; the backups are cleared only when the challenge is
+    /// solved. Fixed dates handle midnight and weekday rollover naturally.
+    private static func scheduleBackups(
+        for alarm: Alarm,
+        preferredLevel: AlarmCapabilityLevel
+    ) async -> BackupOutcome {
+        await cancelBackups(for: alarm.id)
+        guard let anchor = AlarmBackupIds.nextOccurrence(of: alarm, after: Date()) else {
+            return BackupOutcome(registered: 0, lastError: "the alarm time \"\(alarm.time)\" could not be parsed")
+        }
+        let title = LocalizedStringResource(stringLiteral: "Still ringing — solve your challenge")
+        var level = preferredLevel
+        var registered = 0
+        var lastError: String?
+        backupLoop: for (offset, backupId) in AlarmBackupIds.ids(for: alarm.id).enumerated() {
+            let fireDate = anchor.addingTimeInterval(TimeInterval((offset + 1) * 60))
+            let schedule = SystemAlarm.Schedule.fixed(fireDate)
+            while true {
+                let configuration = makeConfiguration(for: level, alarm: alarm, schedule: schedule, title: title)
+                do {
+                    _ = try await AlarmManager.shared.schedule(id: backupId, configuration: configuration)
+                    registered += 1
+                    break
+                } catch {
+                    lastError = describe(error)
+                    logger.error("Backup \(offset + 1, privacy: .public) rejected at level \(level.rawValue, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    guard let next = AlarmCapabilityLevel(rawValue: level.rawValue + 1) else {
+                        break backupLoop
+                    }
+                    level = next
+                }
+            }
+        }
+        return BackupOutcome(registered: registered, lastError: lastError)
+    }
+
+    private static func cancelBackups(for alarmId: String) async {
+        for backupId in AlarmBackupIds.ids(for: alarmId) {
+            try? await AlarmManager.shared.cancel(id: backupId)
+        }
+    }
+
     /// Apple's sample schedules every alarm as a relative time — one-time with
     /// `.never`, repeating with the selected weekdays. No date-based schedules.
     private static func makeSchedule(for alarm: Alarm) -> SystemAlarm.Schedule? {
@@ -283,6 +382,7 @@ struct AlarmKitScheduler: AlarmScheduling {
             secondaryButtonBehavior: level == .standardButtons ? nil : .custom
         )
 
+        let sound = AlertConfiguration.AlertSound.named(toneFileName)
         let attributes = AlarmAttributes<AlarmedAlarmMetadata>(
             presentation: AlarmPresentation(alert: alert),
             metadata: AlarmedAlarmMetadata(alarmId: alarm.id, challengeMode: alarm.dismissalMode),
@@ -298,7 +398,7 @@ struct AlarmKitScheduler: AlarmScheduling {
                 attributes: attributes,
                 stopIntent: intent,
                 secondaryIntent: intent,
-                sound: .default
+                sound: sound
             )
         case .challengeOnly:
             return AlarmManager.AlarmConfiguration(
@@ -306,14 +406,14 @@ struct AlarmKitScheduler: AlarmScheduling {
                 schedule: schedule,
                 attributes: attributes,
                 secondaryIntent: OpenChallengeIntent(alarmID: alarm.id),
-                sound: .default
+                sound: sound
             )
         case .standardButtons:
             return AlarmManager.AlarmConfiguration(
                 countdownDuration: nil,
                 schedule: schedule,
                 attributes: attributes,
-                sound: .default
+                sound: sound
             )
         }
     }
