@@ -53,12 +53,21 @@ struct AlarmRingingView: View {
                 .accessibilityHidden(true)
         }
         .onAppear { startAlarm() }
-        .onDisappear { SystemVolumeLock.shared.disengage() }
+        .onDisappear {
+            SystemVolumeLock.shared.disengage()
+            CrashGuard.end(.challenge)
+        }
         .onChange(of: scenePhase) { _, phase in
             // Leaving the app pauses in-app audio (the re-ring backups keep
             // ringing on the lock screen); coming back resumes full volume.
-            if phase == .active && !completed {
+            switch phase {
+            case .active where !completed:
                 startRinging()
+            case .background:
+                SystemVolumeLock.shared.pause()
+                CrashGuard.end(.challenge)
+            default:
+                break
             }
         }
     }
@@ -140,6 +149,7 @@ struct AlarmRingingView: View {
     /// cap, no mute — and the device volume is locked at max until solved.
     private func startRinging() {
         guard !completed else { return }
+        CrashGuard.begin(.challenge)
         AudioManager.shared.playAlarm(vibrate: viewModel.vibrationEnabled && alarm.vibrate)
         SystemVolumeLock.shared.engage()
     }
@@ -148,6 +158,7 @@ struct AlarmRingingView: View {
     private func challengeSolved() {
         AudioManager.shared.stop()
         SystemVolumeLock.shared.disengage()
+        CrashGuard.end(.challenge)
         viewModel.challengeSolved(alarm)
         completed = true
     }

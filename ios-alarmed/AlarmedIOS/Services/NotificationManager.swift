@@ -80,8 +80,10 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     }
 }
 
+/// Delegate callbacks arrive on a background queue, so they are nonisolated
+/// and hop to the main queue before touching app state.
 extension NotificationManager: UNUserNotificationCenterDelegate {
-    func userNotificationCenter(
+    nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
@@ -89,17 +91,23 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound, .badge])
     }
 
-    func userNotificationCenter(
+    nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let identifier = response.notification.request.identifier.components(separatedBy: "-").first ?? ""
+        // Identifiers are "<uuid>" or "<uuid>-<day>"; the UUID itself
+        // contains dashes, so strip only a known weekday suffix.
+        var identifier = response.notification.request.identifier
+        for day in ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] where identifier.hasSuffix("-\(day)") {
+            identifier = String(identifier.dropLast(day.count + 1))
+        }
+        let alarmId = identifier
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .alarmTriggered,
                 object: nil,
-                userInfo: ["alarmId": identifier]
+                userInfo: ["alarmId": alarmId]
             )
         }
         completionHandler()

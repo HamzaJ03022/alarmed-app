@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 @main
@@ -8,6 +9,8 @@ struct AlarmedIOSApp: App {
     init() {
         // Notification permission is requested from the onboarding
         // "Enable Alarms" button, never automatically at launch.
+        CrashGuard.inspectPreviousSession()
+        CrashGuard.begin(.launch)
         setupTabBarAppearance()
     }
 
@@ -17,7 +20,10 @@ struct AlarmedIOSApp: App {
                 .environment(viewModel)
                 .preferredColorScheme(.dark)
                 .onReceive(
+                    // Posters (App Intents, notification delegate) may run off
+                    // the main thread; state updates must happen on main.
                     NotificationCenter.default.publisher(for: .alarmTriggered)
+                        .receive(on: DispatchQueue.main)
                 ) { notification in
                     if let alarmId = notification.userInfo?["alarmId"] as? String {
                         viewModel.handleAlarmTriggered(systemId: alarmId)
@@ -35,6 +41,8 @@ struct AlarmedIOSApp: App {
                         UserDefaults.standard.removeObject(forKey: AlarmedPendingAlarm.key)
                         viewModel.handleAlarmTriggered(systemId: pending)
                     }
+                    try? await Task.sleep(for: .seconds(4))
+                    CrashGuard.end(.launch)
                 }
         }
     }

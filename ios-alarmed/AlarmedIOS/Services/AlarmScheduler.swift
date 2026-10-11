@@ -129,6 +129,7 @@ enum AlarmBundleFacts {
         lines.append(AlarmSoundTester.isToneBundled
             ? "Loud alarm tone bundled: yes"
             : "Loud alarm tone bundled: NO — alarms would use the quiet default tone")
+        lines.append(contentsOf: CrashGuard.diagnosticLines)
         return lines
     }
 }

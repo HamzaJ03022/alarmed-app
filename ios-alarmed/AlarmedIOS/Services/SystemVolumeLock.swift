@@ -8,14 +8,14 @@ import SwiftUI
 /// previous volume is restored once the challenge is solved.
 ///
 /// iOS only exposes volume control through `MPVolumeView`'s slider, so a
-/// hidden `SystemVolumeLockHost` must be in the view hierarchy (it also keeps
-/// the system volume HUD from flashing on every snap-back).
+/// hidden `SystemVolumeLockHost` must be in the view hierarchy.
 final class SystemVolumeLock {
     static let shared = SystemVolumeLock()
 
     private weak var volumeView: MPVolumeView?
-    private var observation: NSKeyValueObservation?
+    private var observer: VolumeChangeObserver?
     private var savedVolume: Float?
+    private var recentSnaps: [Date] = []
     private(set) var isEngaged: Bool = false
 
     private init() {}
@@ -26,36 +26,59 @@ final class SystemVolumeLock {
     }
 
     /// Pushes volume to max and starts snapping it back on every change.
+    /// Skipped automatically if a previous challenge session ended in a crash
+    /// while the lock was active, so the challenge itself always stays usable.
     func engage() {
+        guard !CrashGuard.isVolumeLockDisabled else { return }
+        CrashGuard.begin(.volumeLock)
         let session = AVAudioSession.sharedInstance()
         if !isEngaged {
             savedVolume = session.outputVolume
+            recentSnaps = []
         }
         isEngaged = true
         setVolume(1.0)
-        observation?.invalidate()
-        observation = session.observe(\.outputVolume, options: [.new]) { _, change in
-            guard let value = change.newValue, value < 0.999 else { return }
-            Task { @MainActor in
-                SystemVolumeLock.shared.snapBack()
+        if observer == nil {
+            // KVO for outputVolume is delivered on a background thread, so the
+            // observer is nonisolated and hops to the main actor explicitly.
+            let newObserver = VolumeChangeObserver {
+                Task { @MainActor in
+                    SystemVolumeLock.shared.snapBack()
+                }
             }
+            newObserver.start()
+            observer = newObserver
         }
     }
 
     /// Stops enforcing and (optionally) restores the pre-alarm volume.
     func disengage(restoreVolume: Bool = true) {
+        CrashGuard.end(.volumeLock)
         guard isEngaged else { return }
         isEngaged = false
-        observation?.invalidate()
-        observation = nil
+        observer?.stop()
+        observer = nil
         if restoreVolume, let saved = savedVolume {
             setVolume(saved)
         }
         savedVolume = nil
     }
 
+    /// Called when the app leaves the foreground mid-challenge: the lock is
+    /// paused (not restored) and re-engaged when the challenge resumes.
+    func pause() {
+        CrashGuard.end(.volumeLock)
+        observer?.stop()
+        observer = nil
+    }
+
     private func snapBack() {
         guard isEngaged else { return }
+        // If the system caps the volume below max (e.g. headphone safety
+        // limits), stop fighting it instead of looping forever.
+        let now = Date()
+        recentSnaps = recentSnaps.filter { now.timeIntervalSince($0) < 3 } + [now]
+        guard recentSnaps.count <= 12 else { return }
         setVolume(1.0)
     }
 
@@ -70,6 +93,43 @@ final class SystemVolumeLock {
             slider.setValue(value, animated: false)
             slider.sendActions(for: .valueChanged)
         }
+    }
+}
+
+/// Thread-safe KVO observer for `AVAudioSession.outputVolume`. Deliberately
+/// nonisolated: iOS calls `observeValue` on an arbitrary background thread,
+/// and a main-actor-isolated callback would trip the runtime isolation check.
+nonisolated final class VolumeChangeObserver: NSObject, @unchecked Sendable {
+    private let onVolumeDropped: @Sendable () -> Void
+    private var isObserving = false
+
+    init(onVolumeDropped: @escaping @Sendable () -> Void) {
+        self.onVolumeDropped = onVolumeDropped
+        super.init()
+    }
+
+    func start() {
+        guard !isObserving else { return }
+        AVAudioSession.sharedInstance().addObserver(self, forKeyPath: "outputVolume", options: [.new], context: nil)
+        isObserving = true
+    }
+
+    func stop() {
+        guard isObserving else { return }
+        AVAudioSession.sharedInstance().removeObserver(self, forKeyPath: "outputVolume")
+        isObserving = false
+    }
+
+    override func observeValue(
+        forKeyPath keyPath: String?,
+        of object: Any?,
+        change: [NSKeyValueChangeKey: Any]?,
+        context: UnsafeMutableRawPointer?
+    ) {
+        guard keyPath == "outputVolume",
+              let value = (change?[.newKey] as? NSNumber)?.floatValue,
+              value < 0.999 else { return }
+        onVolumeDropped()
     }
 }
 
