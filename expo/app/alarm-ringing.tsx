@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Vibration } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goBackOrHome } from '@/utils/navigation';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import { Asset } from 'expo-asset';
 import * as Haptics from 'expo-haptics';
@@ -74,11 +75,7 @@ export default function AlarmRingingScreen() {
   
   useEffect(() => {
     if (!alarm) {
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/');
-      }
+      goBackOrHome(router);
       return;
     }
     

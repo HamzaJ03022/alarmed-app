@@ -1,5 +1,10 @@
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Alarm } from '@/types/alarm';
+
+// expo-notifications scheduling methods are native-only; no-op on web so the
+// preview doesn't crash. In-app alarm behavior on web is unaffected.
+const isWeb = Platform.OS === 'web';
 
 const DAY_MAP: Record<string, number> = {
   'sun': 1, 'mon': 2, 'tue': 3, 'wed': 4,
@@ -13,6 +18,8 @@ const DAY_MAP: Record<string, number> = {
  * Returns the notification identifiers created.
  */
 export async function scheduleAlarmNotification(alarm: Alarm): Promise<string[]> {
+  if (isWeb) return [];
+
   await cancelAlarmNotifications(alarm.id);
 
   const [hours, minutes] = alarm.time.split(':').map(Number);
@@ -77,6 +84,8 @@ export async function scheduleAlarmNotification(alarm: Alarm): Promise<string[]>
  * Finds notifications by checking the alarmId field in content.data.
  */
 export async function cancelAlarmNotifications(alarmId: string): Promise<void> {
+  if (isWeb) return;
+
   const notifications = await Notifications.getAllScheduledNotificationsAsync();
   for (const notif of notifications) {
     if (notif.content.data?.alarmId === alarmId) {

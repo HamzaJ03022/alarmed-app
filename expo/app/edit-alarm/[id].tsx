@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { goBackOrHome } from '@/utils/navigation';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
@@ -62,11 +63,7 @@ export default function EditAlarmScreen() {
   useEffect(() => {
     if (!alarm) {
       Alert.alert('Error', 'Alarm not found');
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/');
-      }
+      goBackOrHome(router);
     }
   }, [alarm, router]);
   
@@ -135,12 +132,8 @@ export default function EditAlarmScreen() {
     // Re-schedule OS notification with updated settings
     const updatedAlarm = { ...alarm, time, label, repeatDays, questionCount, questionDifficulty, questionCategories, vibrate, dismissalMode, dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '' };
     scheduleAlarmNotification(updatedAlarm);
-    
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/');
-    }
+
+    goBackOrHome(router);
   };
   
   const handleDelete = () => {
@@ -165,11 +158,7 @@ export default function EditAlarmScreen() {
   };
   
   const handleCancel = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/');
-    }
+    goBackOrHome(router);
   };
   
   if (!alarm) {

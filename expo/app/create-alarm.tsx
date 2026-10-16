@@ -10,6 +10,7 @@ import {
   Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { goBackOrHome } from '@/utils/navigation';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
@@ -97,19 +98,11 @@ export default function CreateAlarmScreen() {
       dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '',
     });
     
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/');
-    }
+    goBackOrHome(router);
   };
-  
+
   const handleCancel = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/');
-    }
+    goBackOrHome(router);
   };
   
   return (
