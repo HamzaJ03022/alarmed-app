@@ -13,6 +13,8 @@ export const colors = {
   
   border: 'rgba(255, 255, 255, 0.12)',
   inactive: '#666666',
+  // Brighter than `inactive` so bottom-navigation labels stay readable
+  tabInactive: '#8E8E93',
   divider: 'rgba(255, 255, 255, 0.08)',
   overlay: 'rgba(0, 0, 0, 0.8)',
   

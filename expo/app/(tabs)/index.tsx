@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, AppState, AppStateStatus } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Plus, AlertTriangle } from 'lucide-react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Plus, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
 import { useAlarmStore } from '@/store/alarm-store';
 import AlarmItem from '@/components/AlarmItem';
 import EmptyState from '@/components/EmptyState';
@@ -16,20 +16,36 @@ export default function AlarmsScreen() {
   const updateAlarm = useAlarmStore(state => state.updateAlarm);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTriggeredRef = useRef<Set<string>>(new Set());
-  
+  const params = useLocalSearchParams<{ toast?: string }>();
+  const [toast, setToast] = useState('');
+
+  // Success toast handed over from Create/Edit Alarm via route params
+  useEffect(() => {
+    if (params.toast) {
+      setToast(params.toast);
+      router.setParams({ toast: undefined });
+    }
+  }, [params.toast, router]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(''), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const activeAlarms = useMemo(() => {
     return alarms.filter(alarm => alarm.isActive);
   }, [alarms]);
-  
+
   const checkAlarms = useCallback(() => {
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const todayKey = now.toDateString();
-    
+
     for (const alarm of activeAlarms) {
       const alarmTime = alarm.time;
       const triggerKey = `${alarm.id}-${todayKey}-${alarmTime}`;
-      
+
       if (
         alarmTime === currentTime &&
         shouldRingToday(alarm.repeatDays) &&
@@ -47,37 +63,37 @@ export default function AlarmsScreen() {
       }
     }
   }, [activeAlarms, setActiveAlarm, router, updateAlarm]);
-  
+
   useEffect(() => {
     checkAlarms();
-    
+
     intervalRef.current = setInterval(() => {
       checkAlarms();
     }, 1000);
-    
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
   }, [checkAlarms]);
-  
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
         checkAlarms();
       }
     });
-    
+
     return () => {
       subscription.remove();
     };
   }, [checkAlarms]);
-  
+
   const handleCreateAlarm = useCallback(() => {
     router.push('/create-alarm');
   }, [router]);
-  
+
   if (alarms.length === 0) {
     return (
       <EmptyState
@@ -88,16 +104,16 @@ export default function AlarmsScreen() {
       />
     );
   }
-  
+
   return (
     <View style={styles.container}>
       <View style={styles.warningBanner}>
         <AlertTriangle size={18} color={colors.warning} />
         <Text style={styles.warningText}>
-          Keep the app running for alarms to work
+          Alarms ring even when the app is closed — keep notifications enabled
         </Text>
       </View>
-      
+
       <FlatList
         data={alarms}
         keyExtractor={(item) => item.id}
@@ -107,9 +123,16 @@ export default function AlarmsScreen() {
         maxToRenderPerBatch={10}
         windowSize={10}
       />
-      
-      <TouchableOpacity 
-        style={styles.fab} 
+
+      {toast !== '' && (
+        <View style={styles.toast} pointerEvents="none">
+          <CheckCircle2 size={18} color={colors.success} />
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.fab}
         onPress={handleCreateAlarm}
         activeOpacity={0.8}
       >
@@ -140,6 +163,30 @@ const styles = StyleSheet.create({
     color: colors.warning,
     flex: 1,
   },
+  toast: {
+    position: 'absolute',
+    bottom: 110,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.success,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    shadowColor: colors.cardShadow,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  toastText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
   listContent: {
     padding: 16,
     paddingBottom: 100,
@@ -158,6 +205,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 10,
   },
 });

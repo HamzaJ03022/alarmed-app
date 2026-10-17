@@ -51,6 +51,13 @@ struct AlarmedIOSApp: App {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor(red: 0.071, green: 0.071, blue: 0.071, alpha: 1)
+        // Brighter inactive tint so unreadable #666666 labels get usable contrast
+        let item = UITabBarItemAppearance()
+        item.normal.iconColor = UIColor(red: 0.557, green: 0.557, blue: 0.576, alpha: 1) // #8E8E93
+        item.normal.titleTextAttributes = [
+            .foregroundColor: UIColor(red: 0.557, green: 0.557, blue: 0.576, alpha: 1)
+        ]
+        appearance.stackedLayoutAppearance = item
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }

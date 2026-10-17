@@ -6,6 +6,7 @@ struct CreateAlarmView: View {
 
     @State private var selectedDate = Date()
     @State private var label = ""
+    @State private var repeatEnabled = false
     @State private var repeatDays: [String] = []
     @State private var questionCount = 3
     @State private var difficulty = "medium"
@@ -26,17 +27,19 @@ struct CreateAlarmView: View {
     private let categoryOptions: [(key: String, label: String)] = [
         ("math", "Math"), ("general", "General"), ("puzzle", "Puzzle")
     ]
+    private static let weekdays: Set<String> = ["mon", "tue", "wed", "thu", "fri"]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    timeCard
-                    detailsCard
-                    challengeCard
-                    buttonsRow
+                VStack(spacing: 28) {
+                    timeSection
+                    detailsSection
+                    challengeSection
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .background(AppColors.background)
             .navigationDestination(isPresented: $showSoundPicker) {
@@ -51,37 +54,62 @@ struct CreateAlarmView: View {
                         .foregroundStyle(AppColors.textSecondary)
                 }
             }
+            .safeAreaInset(edge: .bottom) { bottomBar }
         }
     }
 
-    private var timeCard: some View {
-        VStack(spacing: 16) {
-            Text("Set Time")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(AppColors.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    // MARK: - Time (primary action)
+
+    private var heroTime: (main: String, suffix: String) {
+        let formatted = TimeFormatter.formatTime12h(TimeFormatter.formatTimeFromDate(selectedDate))
+        let parts = formatted.split(separator: " ", omittingEmptySubsequences: false)
+        return (parts.first.map(String.init) ?? formatted, parts.count > 1 ? String(parts[1]) : "")
+    }
+
+    private var timeSection: some View {
+        VStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(heroTime.main)
+                    .font(.system(size: 60, weight: .light, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(AppColors.text)
+                Text(heroTime.suffix)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(AppColors.primary)
+            }
+            .padding(.top, 12)
+
+            Text("Drag the wheel to set your alarm time")
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
 
             DatePicker("", selection: $selectedDate, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel)
                 .labelsHidden()
                 .colorScheme(.dark)
-                .frame(height: 180)
+                .frame(height: 160)
         }
-        .padding(24)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
+        .frame(maxWidth: .infinity)
     }
 
-    private var detailsCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Alarm Details")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(AppColors.text)
+    // MARK: - Details
 
-            TextField("Alarm label (optional)", text: $label)
-                .padding(16)
-                .background(AppColors.inputBackground, in: RoundedRectangle(cornerRadius: 12))
-                .foregroundStyle(AppColors.text)
+    private var detailsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Details")
+
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Alarm label (optional)", text: $label)
+                    .padding(16)
+                    .background(AppColors.inputBackground, in: RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(AppColors.text)
+            }
+
+            divider
+
+            repeatSection
+
+            divider
 
             Button {
                 showSoundPicker = true
@@ -94,16 +122,62 @@ struct CreateAlarmView: View {
                     Text(AlarmSound.sound(forID: sound).name)
                         .foregroundStyle(AppColors.textSecondary)
                     Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            divider
+
+            HStack {
+                Text("Vibrate")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(AppColors.text)
+                Spacer()
+                Toggle("", isOn: $vibrate)
+                    .tint(AppColors.primary)
+                    .labelsHidden()
+            }
+        }
+        .padding(20)
+        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
+        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
+    }
+
+    private var repeatSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Repeat")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(AppColors.text)
+                    Text(repeatSummary)
                         .font(.caption)
                         .foregroundStyle(AppColors.textSecondary)
                 }
+                Spacer()
+                Toggle("", isOn: $repeatEnabled)
+                    .tint(AppColors.primary)
+                    .labelsHidden()
+                    .onChange(of: repeatEnabled) { _, isOn in
+                        if isOn, repeatDays.isEmpty {
+                            repeatDays = ["mon", "tue", "wed", "thu", "fri"]
+                        } else if !isOn {
+                            repeatDays = []
+                        }
+                    }
             }
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Repeat Days")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.text)
+            if repeatEnabled {
+                HStack(spacing: 8) {
+                    quickRepeatChip("Weekdays", selected: Set(repeatDays) == Self.weekdays) {
+                        repeatDays = ["mon", "tue", "wed", "thu", "fri"]
+                    }
+                    quickRepeatChip("Every day", selected: repeatDays.count == 7) {
+                        repeatDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+                    }
                     Spacer()
                 }
 
@@ -133,23 +207,38 @@ struct CreateAlarmView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
         }
-        .padding(24)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
     }
 
-    private var challengeCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Wake-Up Challenge")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(AppColors.text)
+    private var repeatSummary: String {
+        if !repeatEnabled || repeatDays.isEmpty { return "One-time alarm" }
+        return "Repeats " + TimeFormatter.formatRepeatDays(repeatDays).lowercased()
+    }
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Dismissal Method")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(AppColors.text)
+    private func quickRepeatChip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(selected ? AppColors.text : AppColors.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    selected ? AppColors.primary.opacity(0.35) : AppColors.primary.opacity(0.12),
+                    in: Capsule()
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Challenge
+
+    private var challengeSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionHeader("Wake-Up Challenge")
+
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
                     ForEach(["questions", "phrase"], id: \.self) { mode in
                         Button {
@@ -171,6 +260,12 @@ struct CreateAlarmView: View {
                         }
                     }
                 }
+                Text(dismissalMode == "questions"
+                     ? "Answer quick math and trivia questions to turn the alarm off."
+                     : "Type your own phrase exactly to turn the alarm off.")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .lineSpacing(2)
             }
 
             if dismissalMode == "questions" {
@@ -179,7 +274,7 @@ struct CreateAlarmView: View {
                 phraseSection
             }
         }
-        .padding(24)
+        .padding(20)
         .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
         .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
     }
@@ -187,7 +282,7 @@ struct CreateAlarmView: View {
     private var questionsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Number of Questions")
+                Text("How many questions")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(AppColors.text)
                 HStack(spacing: 0) {
@@ -202,6 +297,7 @@ struct CreateAlarmView: View {
                     }
                     Text("\(questionCount)")
                         .font(.title.bold())
+                        .monospacedDigit()
                         .foregroundStyle(AppColors.text)
                         .frame(minWidth: 60)
                     Button {
@@ -217,7 +313,7 @@ struct CreateAlarmView: View {
             }
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Difficulty")
+                Text("How hard")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(AppColors.text)
                 HStack(spacing: 10) {
@@ -244,7 +340,7 @@ struct CreateAlarmView: View {
             }
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Question Categories")
+                Text("Question topics")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(AppColors.text)
                 HStack(spacing: 8) {
@@ -308,6 +404,7 @@ struct CreateAlarmView: View {
 
             Text("\(dismissPhrase.count)/100")
                 .font(.caption)
+                .monospacedDigit()
                 .foregroundStyle(AppColors.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -324,7 +421,9 @@ struct CreateAlarmView: View {
         }
     }
 
-    private var buttonsRow: some View {
+    // MARK: - Bottom bar
+
+    private var bottomBar: some View {
         HStack(spacing: 12) {
             Button(action: { dismiss() }) {
                 Text("Cancel")
@@ -347,6 +446,31 @@ struct CreateAlarmView: View {
             }
             .disabled(!phraseIsValid)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(AppColors.background)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(AppColors.divider)
+                .frame(height: 1)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var divider: some View {
+        Rectangle()
+            .fill(AppColors.divider)
+            .frame(height: 1)
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.caption.weight(.bold))
+            .textCase(.uppercase)
+            .tracking(0.8)
+            .foregroundStyle(AppColors.textSecondary)
     }
 
     private var phraseIsValid: Bool {
@@ -375,6 +499,8 @@ struct CreateAlarmView: View {
             sound: sound
         )
         viewModel.addAlarm(alarm)
+        viewModel.saveConfirmationMessage =
+            "Alarm saved \u{2022} rings at \(TimeFormatter.formatTime12h(time))"
         dismiss()
     }
 }

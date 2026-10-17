@@ -33,6 +33,20 @@ struct AlarmsListView: View {
                             .padding(.bottom, 100)
                         }
                     }
+                    .overlay(alignment: .bottom) {
+                        if let message = viewModel.saveConfirmationMessage {
+                            saveToast(message)
+                                .id(message)
+                                .task {
+                                    try? await Task.sleep(for: .seconds(2.5))
+                                    if viewModel.saveConfirmationMessage == message {
+                                        viewModel.saveConfirmationMessage = nil
+                                    }
+                                }
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+                    }
+                    .animation(.spring(duration: 0.35), value: viewModel.saveConfirmationMessage)
 
                     VStack {
                         Spacer()
@@ -61,6 +75,22 @@ struct AlarmsListView: View {
             }
         }
     }
+    @ViewBuilder
+    private func saveToast(_ message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(AppColors.success)
+            Text(message)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(AppColors.text)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(AppColors.card, in: Capsule())
+        .overlay(Capsule().stroke(AppColors.success.opacity(0.5), lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 16, y: 6)
+        .padding(.bottom, 110)
+    }
 }
 
 private struct WarningBanner: View {
@@ -69,7 +99,7 @@ private struct WarningBanner: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 18))
                 .foregroundStyle(AppColors.warning)
-            Text("Alarms ring even when the app is closed")
+            Text("Alarms ring even when the app is closed — keep notifications enabled")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppColors.warning)
             Spacer()

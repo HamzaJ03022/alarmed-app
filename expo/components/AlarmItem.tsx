@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Clock, Edit } from 'lucide-react-native';
+import { Clock } from 'lucide-react-native';
 import { formatTime12h, formatRepeatDays, getNextAlarmTime, formatRelativeTime } from '@/utils/time';
 import { useAlarmStore } from '@/store/alarm-store';
 import { colors } from '@/constants/colors';
@@ -15,7 +15,7 @@ interface AlarmItemProps {
 function AlarmItem({ alarm }: AlarmItemProps) {
   const router = useRouter();
   const toggleAlarm = useAlarmStore(state => state.toggleAlarm);
-  
+
   const handleToggle = useCallback(() => {
     const wasActive = alarm.isActive;
     toggleAlarm(alarm.id);
@@ -26,88 +26,77 @@ function AlarmItem({ alarm }: AlarmItemProps) {
       scheduleAlarmNotification({ ...alarm, isActive: true }).catch(() => {});
     }
   }, [toggleAlarm, alarm]);
-  
+
   const handleEdit = useCallback(() => {
     router.push(`/edit-alarm/${alarm.id}`);
   }, [router, alarm.id]);
-  
+
   const nextAlarmTime = useMemo(() => {
     return alarm.isActive ? getNextAlarmTime(alarm.time, alarm.repeatDays) : null;
   }, [alarm.isActive, alarm.time, alarm.repeatDays]);
-  
+
   const nextAlarmText = useMemo(() => {
     return nextAlarmTime ? formatRelativeTime(nextAlarmTime) : '';
   }, [nextAlarmTime]);
-  
+
+  // Clock-style split, e.g. 7:30 + AM
+  const [timeMain, timeSuffix] = useMemo(() => {
+    const formatted = formatTime12h(alarm.time);
+    const idx = formatted.lastIndexOf(' ');
+    return idx === -1 ? [formatted, ''] : [formatted.slice(0, idx), formatted.slice(idx + 1)];
+  }, [alarm.time]);
+
+  const scheduleLine = useMemo(() => {
+    const challengeText = alarm.dismissalMode === 'phrase'
+      ? 'Type a phrase'
+      : `${alarm.questionCount} ${alarm.questionCount === 1 ? 'question' : 'questions'} • ${alarm.questionDifficulty.charAt(0).toUpperCase() + alarm.questionDifficulty.slice(1)}`;
+    return `${formatRepeatDays(alarm.repeatDays)} • ${challengeText}`;
+  }, [alarm.dismissalMode, alarm.questionCount, alarm.questionDifficulty, alarm.repeatDays]);
+
   return (
-    <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.contentContainer} 
+    <View style={[styles.container, !alarm.isActive && styles.containerInactive]}>
+      <TouchableOpacity
+        style={styles.contentContainer}
         onPress={handleEdit}
         activeOpacity={0.7}
       >
         <View style={styles.timeContainer}>
-          <Text style={[
-            styles.time, 
-            !alarm.isActive && styles.inactiveText
-          ]}>
-            {formatTime12h(alarm.time)}
-          </Text>
-          <Text style={[
-            styles.repeat, 
-            !alarm.isActive && styles.inactiveText
-          ]}>
-            {formatRepeatDays(alarm.repeatDays)}
+          <View style={styles.timeRow}>
+            <Text style={[styles.time, !alarm.isActive && styles.inactiveText]}>
+              {timeMain}
+            </Text>
+            <Text style={[styles.timeSuffix, !alarm.isActive && styles.inactiveSuffix]}>
+              {timeSuffix}
+            </Text>
+          </View>
+          <Text style={[styles.metaLine, !alarm.isActive && styles.inactiveText]}>
+            {scheduleLine}
           </Text>
         </View>
-        
+
         <View style={styles.detailsContainer}>
           {alarm.label ? (
-            <Text style={[
-              styles.label, 
-              !alarm.isActive && styles.inactiveText
-            ]}>
+            <Text style={[styles.label, !alarm.isActive && styles.inactiveText]} numberOfLines={1}>
               {alarm.label}
             </Text>
           ) : null}
-          
+
           {alarm.isActive && nextAlarmText ? (
             <View style={styles.nextAlarmContainer}>
               <Clock size={14} color={colors.primary} style={styles.icon} />
               <Text style={styles.nextAlarm}>{nextAlarmText}</Text>
             </View>
           ) : null}
-          
-          <View style={styles.challengeContainer}>
-            <Text style={[
-              styles.challenge, 
-              !alarm.isActive && styles.inactiveText
-            ]}>
-              {alarm.dismissalMode === 'phrase' 
-                ? 'Type a phrase'
-                : `${alarm.questionCount} ${alarm.questionCount === 1 ? 'question' : 'questions'} • ${alarm.questionDifficulty}`}
-            </Text>
-          </View>
         </View>
       </TouchableOpacity>
-      
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity 
-          style={styles.editButton} 
-          onPress={handleEdit}
-          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-        >
-          <Edit size={20} color={colors.primary} />
-        </TouchableOpacity>
-        
-        <Switch
-          value={alarm.isActive}
-          onValueChange={handleToggle}
-          trackColor={{ false: colors.switchTrack, true: colors.primary }}
-          thumbColor={Platform.OS === 'ios' ? undefined : colors.switchThumb}
-          ios_backgroundColor={colors.switchTrack}
-        />
-      </View>
+
+      <Switch
+        value={alarm.isActive}
+        onValueChange={handleToggle}
+        trackColor={{ false: colors.switchTrack, true: colors.primary }}
+        thumbColor={Platform.OS === 'ios' ? undefined : colors.switchThumb}
+        ios_backgroundColor={colors.switchTrack}
+      />
     </View>
   );
 }
@@ -126,22 +115,43 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
+  containerInactive: {
+    opacity: 0.75,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   contentContainer: {
     flex: 1,
     flexDirection: 'row',
+    alignItems: 'center',
   },
   timeContainer: {
     marginRight: 16,
   },
-  time: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
   },
-  repeat: {
+  time: {
+    fontSize: 34,
+    fontWeight: '300',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  timeSuffix: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    paddingBottom: 5,
+  },
+  inactiveSuffix: {
+    color: colors.inactive,
+  },
+  metaLine: {
     fontSize: 12,
     color: colors.textSecondary,
+    marginTop: 2,
   },
   detailsContainer: {
     flex: 1,
@@ -149,37 +159,21 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
   },
   nextAlarmContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
   },
   icon: {
     marginRight: 4,
   },
   nextAlarm: {
     fontSize: 12,
+    fontWeight: '600',
     color: colors.primary,
-  },
-  challengeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  challenge: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  editButton: {
-    marginRight: 16,
-    padding: 4,
   },
   inactiveText: {
     color: colors.inactive,

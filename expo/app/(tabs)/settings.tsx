@@ -1,7 +1,19 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Trash2, Volume2, Vibrate, HelpCircle, Info, Quote, VolumeX, AlertTriangle, FileText } from 'lucide-react-native';
+import {
+  Trash2,
+  Volume2,
+  VolumeX,
+  Vibrate,
+  HelpCircle,
+  Info,
+  Quote,
+  AlertTriangle,
+  FileText,
+  ChevronRight,
+  TrendingUp,
+} from 'lucide-react-native';
 import Slider from '@react-native-community/slider';
 import { colors } from '@/constants/colors';
 import { useAlarmStore } from '@/store/alarm-store';
@@ -15,45 +27,45 @@ export default function SettingsScreen() {
   const clearHistory = useAlarmStore(state => state.clearHistory);
   const clearAlarms = useAlarmStore(state => state.clearAlarms);
   const quotes = useAlarmStore(state => state.quotes);
-  
+
   // Get and set volume from store
   const volume = useAlarmStore(state => state.volume);
   const setVolume = useAlarmStore(state => state.setVolume);
-  
+
   // Get and set crescendo option from store
   const crescendoEnabled = useAlarmStore(state => state.crescendoEnabled);
   const setCrescendoEnabled = useAlarmStore(state => state.setCrescendoEnabled);
-  
+
   const handleClearHistory = useCallback(() => {
     Alert.alert(
       'Clear History',
       'Are you sure you want to clear all alarm history? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear', 
+        {
+          text: 'Clear',
           style: 'destructive',
           onPress: () => clearHistory()
         }
       ]
     );
   }, [clearHistory]);
-  
+
   const handleClearAlarms = useCallback(() => {
     Alert.alert(
       'Clear All Alarms',
       'Are you sure you want to delete all alarms? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear', 
+        {
+          text: 'Clear',
           style: 'destructive',
           onPress: () => clearAlarms()
         }
       ]
     );
   }, [clearAlarms]);
-  
+
   const handleAbout = useCallback(() => {
     Alert.alert(
       'About Alarmed',
@@ -61,7 +73,7 @@ export default function SettingsScreen() {
       [{ text: 'OK' }]
     );
   }, []);
-  
+
   const handleHelp = useCallback(() => {
     Alert.alert(
       'How to Use Alarmed',
@@ -69,14 +81,14 @@ export default function SettingsScreen() {
       [{ text: 'OK' }]
     );
   }, []);
-  
+
   const handleManageQuotes = useCallback(() => {
     router.push('/quotes');
   }, [router]);
-  
+
   return (
-    <ScrollView 
-      style={styles.container} 
+    <ScrollView
+      style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={true}
       bounces={true}
@@ -89,17 +101,17 @@ export default function SettingsScreen() {
         <View style={styles.warningContent}>
           <Text style={styles.warningTitle}>Important</Text>
           <Text style={styles.warningDescription}>
-            Keep the app running in the background for alarms to work. Closing the app will prevent alarms from ringing.
+            Alarms ring even when the app is closed. Keep notifications enabled — a notification delivers the alarm and opens the wake-up challenge.
           </Text>
         </View>
       </View>
-      
+
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Alarm Settings</Text>
-        
+        <Text style={styles.sectionTitle}>Alarms &amp; Sound</Text>
+
         <View style={styles.settingItem}>
           <View style={styles.settingLabelContainer}>
-            <Volume2 size={20} color={colors.textSecondary} style={styles.settingIcon} />
+            {iconCircle(<Volume2 size={18} color={colors.primary} />)}
             <Text style={styles.settingLabel}>Sound</Text>
           </View>
           <Switch
@@ -110,8 +122,9 @@ export default function SettingsScreen() {
             ios_backgroundColor={colors.switchTrack}
           />
         </View>
-        
-        {/* Volume Slider */}
+
+        <View style={styles.rowDivider} />
+
         <View style={styles.volumeContainer}>
           <View style={styles.volumeIcons}>
             <VolumeX size={16} color={colors.textSecondary} />
@@ -132,12 +145,13 @@ export default function SettingsScreen() {
             {Math.round(volume * 100)}%
           </Text>
         </View>
-        
-        {/* Crescendo Option */}
+
+        <View style={styles.rowDivider} />
+
         <View style={styles.settingItem}>
           <View style={styles.settingLabelContainer}>
-            <Volume2 size={20} color={colors.textSecondary} style={styles.settingIcon} />
-            <View>
+            {iconCircle(<TrendingUp size={18} color={colors.primary} />)}
+            <View style={styles.settingTextContainer}>
               <Text style={styles.settingLabel}>Crescendo Alarm</Text>
               <Text style={styles.settingDescription}>
                 Gradually increase volume over time
@@ -152,10 +166,12 @@ export default function SettingsScreen() {
             ios_backgroundColor={colors.switchTrack}
           />
         </View>
-        
+
+        <View style={styles.rowDivider} />
+
         <View style={styles.settingItem}>
           <View style={styles.settingLabelContainer}>
-            <Vibrate size={20} color={colors.textSecondary} style={styles.settingIcon} />
+            {iconCircle(<Vibrate size={18} color={colors.primary} />)}
             <Text style={styles.settingLabel}>Vibration</Text>
           </View>
           <Switch
@@ -166,58 +182,73 @@ export default function SettingsScreen() {
             ios_backgroundColor={colors.switchTrack}
           />
         </View>
-        
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={handleManageQuotes}
-        >
-          <Quote size={20} color={colors.textSecondary} style={styles.buttonIcon} />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>More</Text>
+
+        <TouchableOpacity style={styles.button} onPress={handleManageQuotes}>
+          {iconCircle(<Quote size={18} color={colors.primary} />)}
           <View style={styles.buttonTextContainer}>
             <Text style={styles.buttonText}>Motivational Quotes</Text>
             <Text style={styles.buttonSubtext}>{quotes.length} quotes</Text>
           </View>
+          <ChevronRight size={18} color={colors.textSecondary} />
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => router.push('/privacy-policy')}
-        >
-          <FileText size={20} color={colors.textSecondary} style={styles.buttonIcon} />
+
+        <View style={styles.rowDivider} />
+
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/privacy-policy')}>
+          {iconCircle(<FileText size={18} color={colors.primary} />)}
           <View style={styles.buttonTextContainer}>
             <Text style={styles.buttonText}>Privacy Policy</Text>
+            <Text style={styles.buttonSubtext}>How Alarmed handles your data</Text>
           </View>
+          <ChevronRight size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Data Management</Text>
-        
+
         <TouchableOpacity style={styles.button} onPress={handleClearHistory}>
-          <Trash2 size={20} color={colors.error} style={styles.buttonIcon} />
+          {iconCircle(<Trash2 size={18} color={colors.error} />, colors.error)}
           <Text style={[styles.buttonText, styles.dangerText]}>Clear Alarm History</Text>
+          <ChevronRight size={18} color={colors.error} />
         </TouchableOpacity>
-        
+
+        <View style={styles.rowDivider} />
+
         <TouchableOpacity style={styles.button} onPress={handleClearAlarms}>
-          <Trash2 size={20} color={colors.error} style={styles.buttonIcon} />
+          {iconCircle(<Trash2 size={18} color={colors.error} />, colors.error)}
           <Text style={[styles.buttonText, styles.dangerText]}>Delete All Alarms</Text>
+          <ChevronRight size={18} color={colors.error} />
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
-        
+
         <TouchableOpacity style={styles.button} onPress={handleHelp}>
-          <HelpCircle size={20} color={colors.textSecondary} style={styles.buttonIcon} />
+          {iconCircle(<HelpCircle size={18} color={colors.primary} />)}
           <Text style={styles.buttonText}>How to Use</Text>
+          <ChevronRight size={18} color={colors.textSecondary} />
         </TouchableOpacity>
-        
+
+        <View style={styles.rowDivider} />
+
         <TouchableOpacity style={styles.button} onPress={handleAbout}>
-          <Info size={20} color={colors.textSecondary} style={styles.buttonIcon} />
+          {iconCircle(<Info size={18} color={colors.primary} />)}
           <Text style={styles.buttonText}>About Alarmed</Text>
+          <ChevronRight size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
+}
+
+function iconCircle(icon: React.ReactNode, tint: string = 'rgba(76, 125, 254, 0.12)') {
+  return <View style={[styles.iconCircle, { backgroundColor: tint }]}>{icon}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -257,10 +288,10 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   section: {
-    marginBottom: 28,
+    marginBottom: 24,
     backgroundColor: colors.card,
     borderRadius: 24,
-    padding: 24,
+    padding: 20,
     shadowColor: colors.cardShadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
@@ -268,26 +299,34 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 14,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 24,
-    letterSpacing: 0.2,
+    color: colors.textSecondary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 18,
-    borderBottomWidth: 0,
+    paddingVertical: 14,
   },
   settingLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  settingIcon: {
-    marginRight: 14,
+  settingTextContainer: {
+    flex: 1,
   },
   settingLabel: {
     fontSize: 16,
@@ -299,9 +338,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 4,
   },
+  rowDivider: {
+    height: 1,
+    backgroundColor: colors.divider,
+  },
   volumeContainer: {
-    paddingVertical: 18,
-    borderBottomWidth: 0,
+    paddingVertical: 14,
   },
   volumeIcons: {
     flexDirection: 'row',
@@ -321,11 +363,7 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
-    borderBottomWidth: 0,
-  },
-  buttonIcon: {
-    marginRight: 14,
+    paddingVertical: 14,
   },
   buttonTextContainer: {
     flex: 1,

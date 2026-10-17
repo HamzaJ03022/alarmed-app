@@ -34,6 +34,8 @@ final class AlarmsViewModel {
     /// Status line from the last "Play test sound" tap.
     var testSoundStatus: String? = nil
     var isPlayingTestSound: Bool = false
+    /// Transient save/update toast shown on the Alarms list. Never persisted.
+    var saveConfirmationMessage: String? = nil
 
     private let storage = UserDefaults.standard
     private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()

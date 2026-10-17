@@ -10,12 +10,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 24) {
                     warningCard
                     loudnessTipCard
 
                     alarmEngineCard
-                    alarmSettingsCard
+                    alarmsSoundCard
+                    quotesCard
                     dataManagementCard
                     aboutCard
                 }
@@ -48,6 +49,8 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Warning (audited copy)
+
     private var warningCard: some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -57,7 +60,7 @@ struct SettingsView: View {
                 Text("Important")
                     .font(.body.weight(.bold))
                     .foregroundStyle(AppColors.warning)
-                Text("Alarms ring even when the app is closed. Keep notifications enabled — on iOS 18–25 alarms are delivered as notifications.")
+                Text("Alarms ring even when the app is closed. Keep notifications enabled — a notification delivers the alarm and opens the wake-up challenge.")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(AppColors.warning.opacity(0.9))
                     .lineSpacing(2)
@@ -172,6 +175,7 @@ struct SettingsView: View {
             if let count = viewModel.systemAlarmCount {
                 Text("Registered system alarms: \(count) (each alarm + its re-ring backups)")
                     .font(.caption.weight(.semibold))
+                    .monospacedDigit()
                     .foregroundStyle(AppColors.textSecondary)
             }
 
@@ -208,17 +212,15 @@ struct SettingsView: View {
         .task { viewModel.refreshEngineDiagnostics() }
     }
 
-    private var alarmSettingsCard: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Text("Alarm Settings")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(AppColors.text)
+    // MARK: - Alarms & Sound
 
+    private var alarmsSoundCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            cardTitle("Alarms & Sound")
+
+            // Static information row (no chevron): explains the locked volume
             HStack(spacing: 14) {
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.body)
-                    .foregroundStyle(AppColors.primary)
-                    .frame(width: 20)
+                rowIcon("speaker.wave.3.fill")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Alarm volume: always max")
                         .font(.body.weight(.semibold))
@@ -229,19 +231,24 @@ struct SettingsView: View {
                 }
                 Spacer()
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, 12)
 
+            rowDivider
+
+            // Tappable row: plays (or stops) the bundled test tone
             Button(action: { viewModel.playTestSound() }) {
-                HStack(spacing: 8) {
-                    Image(systemName: viewModel.isPlayingTestSound ? "stop.fill" : "play.fill")
-                    Text(viewModel.isPlayingTestSound ? "Stop test sound" : "Play test sound")
+                HStack(spacing: 14) {
+                    rowIcon("play.fill")
+                    Text("Play test sound")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(AppColors.text)
                     Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppColors.textSecondary)
                 }
-                .font(.caption.weight(.bold))
-                .foregroundStyle(AppColors.primary)
                 .padding(.vertical, 12)
-                .padding(.horizontal, 14)
-                .background(AppColors.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -250,149 +257,157 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(AppColors.textSecondary)
                     .lineSpacing(2)
+                    .padding(.bottom, 8)
             }
 
-            settingToggle(
-                icon: "waveform.path",
-                title: "Vibration",
-                isOn: Binding(
+            rowDivider
+
+            // Static row with a control: the toggle is the affordance
+            HStack(spacing: 14) {
+                rowIcon("waveform.path")
+                Text("Vibration")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(AppColors.text)
+                Spacer()
+                Toggle("", isOn: Binding(
                     get: { viewModel.vibrationEnabled },
                     set: { viewModel.vibrationEnabled = $0 }
-                )
-            )
+                ))
+                .tint(AppColors.primary)
+                .labelsHidden()
+            }
+            .padding(.vertical, 12)
+        }
+        .padding(20)
+        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
+        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
+    }
 
-            navigationButton(
+    private var quotesCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            cardTitle("Quotes")
+
+            navigationRow(
                 icon: "quote.bubble.fill",
                 title: "Motivational Quotes",
                 subtitle: "\(viewModel.quotes.count) quotes",
                 action: { showQuotes = true }
             )
         }
-        .padding(24)
+        .padding(20)
         .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
         .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
     }
 
+    // MARK: - Data & About
+
     private var dataManagementCard: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Text("Data Management")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(AppColors.text)
+        VStack(alignment: .leading, spacing: 4) {
+            cardTitle("Data Management")
 
-            Button(action: { showClearHistoryAlert = true }) {
-                HStack(spacing: 14) {
-                    Image(systemName: "trash")
-                        .font(.body)
-                        .foregroundStyle(AppColors.error)
-                    Text("Clear Alarm History")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.error)
-                    Spacer()
-                }
-                .padding(.vertical, 18)
-            }
+            destructiveRow(title: "Clear Alarm History", action: { showClearHistoryAlert = true })
 
-            Button(action: { showClearAlarmsAlert = true }) {
-                HStack(spacing: 14) {
-                    Image(systemName: "trash")
-                        .font(.body)
-                        .foregroundStyle(AppColors.error)
-                    Text("Delete All Alarms")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.error)
-                    Spacer()
-                }
-                .padding(.vertical, 18)
-            }
+            rowDivider
+
+            destructiveRow(title: "Delete All Alarms", action: { showClearAlarmsAlert = true })
         }
-        .padding(24)
+        .padding(20)
         .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
         .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
     }
 
     private var aboutCard: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Text("About")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(AppColors.text)
+        VStack(alignment: .leading, spacing: 4) {
+            cardTitle("About")
 
-            Button(action: showHelp) {
-                HStack(spacing: 14) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.body)
-                        .foregroundStyle(AppColors.textSecondary)
-                    Text("How to Use")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.text)
-                    Spacer()
-                }
-                .padding(.vertical, 18)
-            }
+            navigationRow(icon: "questionmark.circle", title: "How to Use", subtitle: "", action: showHelp)
 
-            Button(action: showAbout) {
-                HStack(spacing: 14) {
-                    Image(systemName: "info.circle")
-                        .font(.body)
-                        .foregroundStyle(AppColors.textSecondary)
-                    Text("About Alarmed")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.text)
-                    Spacer()
-                }
-                .padding(.vertical, 18)
-            }
+            rowDivider
 
-            navigationButton(
+            navigationRow(icon: "info.circle", title: "About Alarmed", subtitle: "", action: showAbout)
+
+            rowDivider
+
+            navigationRow(
                 icon: "lock.shield",
                 title: "Privacy Policy",
                 subtitle: "How Alarmed handles your data",
                 action: { showPrivacyPolicy = true }
             )
         }
-        .padding(24)
+        .padding(20)
         .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
         .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
     }
 
-    private func settingToggle(icon: String, title: String, isOn: Binding<Bool>) -> some View {
-        HStack {
-            Image(systemName: icon)
-                .font(.body)
-                .foregroundStyle(AppColors.textSecondary)
-                .frame(width: 20)
-            Text(title)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(AppColors.text)
-            Spacer()
-            Toggle("", isOn: isOn)
-                .tint(AppColors.primary)
-                .labelsHidden()
-        }
-        .padding(.vertical, 6)
+    // MARK: - Row building blocks
+
+    private func cardTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.title3.weight(.bold))
+            .foregroundStyle(AppColors.text)
+            .padding(.bottom, 8)
     }
 
-    private func navigationButton(icon: String, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(AppColors.divider)
+            .frame(height: 1)
+    }
+
+    /// Icon inside a tinted circle — marks every interactive row the same way
+    private func rowIcon(_ systemName: String, tint: Color = AppColors.primary) -> some View {
+        Image(systemName: systemName)
+            .font(.body)
+            .foregroundStyle(tint)
+            .frame(width: 36, height: 36)
+            .background(tint.opacity(0.12), in: Circle())
+    }
+
+    private func navigationRow(icon: String, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.body)
-                    .foregroundStyle(AppColors.textSecondary)
+                rowIcon(icon)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(AppColors.text)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(AppColors.textSecondary)
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.caption.bold())
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(AppColors.textSecondary)
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
+
+    private func destructiveRow(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                rowIcon("trash", tint: AppColors.error)
+                Text(title)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(AppColors.error)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppColors.error.opacity(0.6))
+            }
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Alerts
 
     private func showHelp() {
         let alert = UIAlertController(
