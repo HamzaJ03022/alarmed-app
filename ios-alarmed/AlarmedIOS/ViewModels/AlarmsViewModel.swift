@@ -77,6 +77,7 @@ final class AlarmsViewModel {
         if let vibrate = updates.vibrate { alarm.vibrate = vibrate }
         if let dismissalMode = updates.dismissalMode { alarm.dismissalMode = dismissalMode }
         if let dismissPhrase = updates.dismissPhrase { alarm.dismissPhrase = dismissPhrase }
+        if let sound = updates.sound { alarm.sound = sound }
         alarms[index] = alarm
         save()
         // Cancel first, then reschedule, in one ordered task — an unordered
@@ -342,4 +343,5 @@ struct PartialAlarmUpdate {
     var vibrate: Bool? = nil
     var dismissalMode: String? = nil
     var dismissPhrase: String? = nil
+    var sound: String? = nil
 }

@@ -198,7 +198,7 @@ export const useAlarmStore = create<AlarmState>()(
     {
       name: 'alarmed-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 3,
+      version: 4,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown> | undefined;
         if (!state) return state as never;
@@ -218,6 +218,14 @@ export const useAlarmStore = create<AlarmState>()(
         if (state.hasSeenOnboarding === undefined) state.hasSeenOnboarding = true;
         if (state.defaultChallengeMode !== 'phrase') state.defaultChallengeMode = 'questions';
         if (typeof state.onboardingPhrase !== 'string') state.onboardingPhrase = '';
+        // v3 -> v4: alarm sound library. Older alarms carry the placeholder
+        // 'default' sound (or none) — everyone moves to the new default tone.
+        if (version < 4 && Array.isArray(state.alarms)) {
+          state.alarms = (state.alarms as Alarm[]).map((alarm) => ({
+            ...alarm,
+            sound: alarm.sound && alarm.sound !== 'default' ? alarm.sound : 'wake_pulse',
+          }));
+        }
         return state as never;
       },
     }

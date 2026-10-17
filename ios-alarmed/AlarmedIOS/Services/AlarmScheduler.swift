@@ -129,6 +129,8 @@ enum AlarmBundleFacts {
         lines.append(AlarmSoundTester.isToneBundled
             ? "Loud alarm tone bundled: yes"
             : "Loud alarm tone bundled: NO — alarms would use the quiet default tone")
+        let bundled = AlarmSound.all.filter(\.isBundled).count
+        lines.append("Alarm sound library: \(bundled) of \(AlarmSound.all.count) tones bundled")
         lines.append(contentsOf: CrashGuard.diagnosticLines)
         return lines
     }

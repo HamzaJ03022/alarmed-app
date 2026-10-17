@@ -150,7 +150,7 @@ struct AlarmRingingView: View {
     private func startRinging() {
         guard !completed else { return }
         CrashGuard.begin(.challenge)
-        AudioManager.shared.playAlarm(vibrate: viewModel.vibrationEnabled && alarm.vibrate)
+        AudioManager.shared.playAlarm(soundId: alarm.sound, vibrate: viewModel.vibrationEnabled && alarm.vibrate)
         SystemVolumeLock.shared.engage()
     }
 

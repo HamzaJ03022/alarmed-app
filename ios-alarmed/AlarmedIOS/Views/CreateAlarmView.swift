@@ -13,7 +13,10 @@ struct CreateAlarmView: View {
     @State private var vibrate = true
     @State private var dismissalMode: String = "questions"
     @State private var dismissPhrase = ""
+    @State private var sound = AlarmSound.defaultID
     @State private var didApplyDefaults = false
+
+    @State private var showSoundPicker = false
 
     private let allDays: [(key: String, label: String)] = [
         ("mon", "M"), ("tue", "T"), ("wed", "W"), ("thu", "T"),
@@ -36,6 +39,9 @@ struct CreateAlarmView: View {
                 .padding(20)
             }
             .background(AppColors.background)
+            .navigationDestination(isPresented: $showSoundPicker) {
+                SoundPickerView(selectedSoundId: $sound)
+            }
             .onAppear(perform: applyOnboardingDefaults)
             .navigationTitle("Create Alarm")
             .navigationBarTitleDisplayMode(.inline)
@@ -76,6 +82,22 @@ struct CreateAlarmView: View {
                 .padding(16)
                 .background(AppColors.inputBackground, in: RoundedRectangle(cornerRadius: 12))
                 .foregroundStyle(AppColors.text)
+
+            Button {
+                showSoundPicker = true
+            } label: {
+                HStack {
+                    Text("Sound")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(AppColors.text)
+                    Spacer()
+                    Text(AlarmSound.sound(forID: sound).name)
+                        .foregroundStyle(AppColors.textSecondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -349,7 +371,8 @@ struct CreateAlarmView: View {
             questionCategories: categories,
             vibrate: vibrate,
             dismissalMode: dismissalMode,
-            dismissPhrase: dismissalMode == "phrase" ? dismissPhrase : ""
+            dismissPhrase: dismissalMode == "phrase" ? dismissPhrase : "",
+            sound: sound
         )
         viewModel.addAlarm(alarm)
         dismiss()

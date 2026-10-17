@@ -17,6 +17,8 @@ import { colors } from '@/constants/colors';
 import { formatTimeFromDate } from '@/utils/time';
 import { scheduleAlarmNotification } from '@/utils/notifications';
 import { RepeatDay, QuestionDifficulty, QuestionCategory, DismissalMode } from '@/types/alarm';
+import SoundPicker from '@/components/SoundPicker';
+import { DEFAULT_ALARM_SOUND_ID } from '@/constants/sounds';
 
 export default function CreateAlarmScreen() {
   const router = useRouter();
@@ -35,6 +37,7 @@ export default function CreateAlarmScreen() {
   const [repeatEnabled, setRepeatEnabled] = useState(false);
   const [dismissalMode, setDismissalMode] = useState<DismissalMode>(defaultMode);
   const [dismissPhrase, setDismissPhrase] = useState(onboardingPhrase);
+  const [sound, setSound] = useState(DEFAULT_ALARM_SOUND_ID);
   
   const handleDayToggle = useCallback((day: RepeatDay) => {
     if (repeatDays.includes(day)) {
@@ -76,7 +79,7 @@ export default function CreateAlarmScreen() {
       questionCount,
       questionDifficulty,
       questionCategories,
-      sound: 'default',
+      sound,
       vibrate: true,
       dismissalMode,
       dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '',
@@ -92,7 +95,7 @@ export default function CreateAlarmScreen() {
       questionCount,
       questionDifficulty,
       questionCategories,
-      sound: 'default',
+      sound,
       vibrate: true,
       dismissalMode,
       dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '',
@@ -206,6 +209,11 @@ export default function CreateAlarmScreen() {
             </View>
           )}
         </View>
+      </View>
+      
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>Alarm Sound</Text>
+        <SoundPicker value={sound} onChange={setSound} />
       </View>
       
       <View style={styles.formSection}>

@@ -19,6 +19,8 @@ import { formatTimeFromDate } from '@/utils/time';
 import { scheduleAlarmNotification, cancelAlarmNotifications } from '@/utils/notifications';
 import DaySelector from '@/components/DaySelector';
 import { RepeatDay, QuestionDifficulty, QuestionCategory, DismissalMode } from '@/types/alarm';
+import SoundPicker from '@/components/SoundPicker';
+import { DEFAULT_ALARM_SOUND_ID } from '@/constants/sounds';
 import { Trash2, Quote } from 'lucide-react-native';
 
 export default function EditAlarmScreen() {
@@ -57,6 +59,7 @@ export default function EditAlarmScreen() {
     (alarm?.dismissalMode as DismissalMode) || 'questions'
   );
   const [dismissPhrase, setDismissPhrase] = useState(alarm?.dismissPhrase || '');
+  const [sound, setSound] = useState(alarm?.sound || DEFAULT_ALARM_SOUND_ID);
   const [newQuote, setNewQuote] = useState('');
   const [showQuoteInput, setShowQuoteInput] = useState(false);
   
@@ -127,6 +130,7 @@ export default function EditAlarmScreen() {
       vibrate,
       dismissalMode,
       dismissPhrase: dismissalMode === 'phrase' ? dismissPhrase : '',
+      sound,
     });
     
     // Re-schedule OS notification with updated settings
@@ -242,6 +246,11 @@ export default function EditAlarmScreen() {
             ios_backgroundColor={colors.switchTrack}
           />
         </View>
+      </View>
+      
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>Alarm Sound</Text>
+        <SoundPicker value={sound} onChange={setSound} />
       </View>
       
       <View style={styles.formSection}>

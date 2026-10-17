@@ -13,6 +13,7 @@ import PhraseChallenge from '@/components/PhraseChallenge';
 import { formatTime12h } from '@/utils/time';
 import { Question } from '@/types/alarm';
 import MotivationalQuote from '@/components/MotivationalQuote';
+import { alarmSoundForId } from '@/constants/sounds';
 
 export default function AlarmRingingScreen() {
   const router = useRouter();
@@ -95,8 +96,8 @@ export default function AlarmRingingScreen() {
       try {
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Load local alarm sound from bundled assets
-        const asset = Asset.fromModule(require('@/assets/alarm.mp3'));
+        // Load the alarm's chosen tone from bundled assets
+        const asset = Asset.fromModule(alarmSoundForId(alarm?.sound).audio);
         await asset.downloadAsync();
         
         const { sound: newSound } = await Audio.Sound.createAsync(

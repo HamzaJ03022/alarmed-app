@@ -81,9 +81,8 @@ struct AlarmKitScheduler: AlarmScheduling {
     /// safely shares one in-flight request between them.
     private static var inFlightAuthorization: Task<AlarmManager.AuthorizationState, Error>?
 
-    /// Loudness-maximized tone (compressed + limited, presence boost, 29s —
-    /// under the 30s system sound limit). The extension is required or the
-    /// system silently falls back to the quiet default tone.
+    /// Deprecated single-tone name — kept only as the fallback when an
+    /// alarm's own tone is somehow missing from the bundle.
     static let toneFileName = "alarm_loud.caf"
 
     func schedule(_ alarm: Alarm) async -> AlarmScheduleResult {
@@ -382,7 +381,10 @@ struct AlarmKitScheduler: AlarmScheduling {
             secondaryButtonBehavior: level == .standardButtons ? nil : .custom
         )
 
-        let sound = AlertConfiguration.AlertSound.named(toneFileName)
+        // The alarm's own tone; a missing bundled file falls back to the
+        // classic loud tone so the alarm never rings quietly.
+        let tone = AlarmSound.sound(forID: alarm.sound)
+        let sound = AlertConfiguration.AlertSound.named(tone.isBundled ? tone.fileName : Self.toneFileName)
         let attributes = AlarmAttributes<AlarmedAlarmMetadata>(
             presentation: AlarmPresentation(alert: alert),
             metadata: AlarmedAlarmMetadata(alarmId: alarm.id, challengeMode: alarm.dismissalMode),

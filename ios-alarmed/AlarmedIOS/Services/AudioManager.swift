@@ -23,13 +23,14 @@ final class AudioManager: @unchecked Sendable {
 
     /// Starts the looping alarm at full volume. Safe to call again (e.g. when
     /// returning to the foreground): it only restarts playback if stopped.
-    func playAlarm(vibrate: Bool = true) {
+    func playAlarm(soundId: String? = nil, vibrate: Bool = true) {
         activateSession()
         if let player, player.isPlaying {
             if vibrate && vibrationTimer == nil { startVibration() }
             return
         }
-        guard let url = AlarmSoundTester.toneURL
+        guard let url = Self.toneURL(for: soundId)
+            ?? AlarmSoundTester.toneURL
             ?? Bundle.main.url(forResource: "alarm", withExtension: "mp3") else {
             playSystemAlarm()
             if vibrate { startVibration() }
@@ -60,6 +61,12 @@ final class AudioManager: @unchecked Sendable {
 
     private func playSystemAlarm() {
         AudioServicesPlayAlertSound(1005)
+    }
+
+    /// Resolves the alarm's chosen tone to a bundled file URL.
+    private static func toneURL(for soundId: String?) -> URL? {
+        let tone = AlarmSound.sound(forID: soundId)
+        return Bundle.main.url(forResource: tone.baseName, withExtension: "caf")
     }
 
     func stop() {

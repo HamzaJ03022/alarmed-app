@@ -14,8 +14,10 @@ struct EditAlarmView: View {
     @State private var vibrate: Bool
     @State private var dismissalMode: String
     @State private var dismissPhrase: String
+    @State private var sound: String
 
     @State private var showDeleteConfirm = false
+    @State private var showSoundPicker = false
 
     private let allDays: [(key: String, label: String)] = [
         ("mon", "M"), ("tue", "T"), ("wed", "W"), ("thu", "T"),
@@ -44,6 +46,7 @@ struct EditAlarmView: View {
         _vibrate = State(initialValue: alarm.vibrate)
         _dismissalMode = State(initialValue: alarm.dismissalMode)
         _dismissPhrase = State(initialValue: alarm.dismissPhrase)
+        _sound = State(initialValue: alarm.sound)
     }
 
     var body: some View {
@@ -58,6 +61,9 @@ struct EditAlarmView: View {
                 .padding(20)
             }
             .background(AppColors.background)
+            .navigationDestination(isPresented: $showSoundPicker) {
+                SoundPickerView(selectedSoundId: $sound)
+            }
             .navigationTitle("Edit Alarm")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -144,6 +150,22 @@ struct EditAlarmView: View {
                                 )
                         }
                     }
+                }
+            }
+
+            Button {
+                showSoundPicker = true
+            } label: {
+                HStack {
+                    Text("Sound")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(AppColors.text)
+                    Spacer()
+                    Text(AlarmSound.sound(forID: sound).name)
+                        .foregroundStyle(AppColors.textSecondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
                 }
             }
 
@@ -400,7 +422,8 @@ struct EditAlarmView: View {
             questionCategories: categories,
             vibrate: vibrate,
             dismissalMode: dismissalMode,
-            dismissPhrase: dismissalMode == "phrase" ? dismissPhrase : ""
+            dismissPhrase: dismissalMode == "phrase" ? dismissPhrase : "",
+            sound: sound
         ))
         dismiss()
     }
