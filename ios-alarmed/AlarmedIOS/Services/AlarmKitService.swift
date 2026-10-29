@@ -150,6 +150,21 @@ struct AlarmKitScheduler: AlarmScheduling {
         }
     }
 
+    /// Maps every active alarm to how many of its re-ring backups are
+    /// currently armed with AlarmKit. Used by the Settings diagnostics card so
+    /// a silent backup-registration failure cannot hide. Returns nil when the
+    /// system does not expose registered alarms.
+    func armedBackupCounts(alarms: [Alarm]) async -> [String: Int]? {
+        guard let scheduled = try? AlarmManager.shared.alarms else { return nil }
+        let scheduledIds = Set(scheduled.map(\.id))
+        var counts: [String: Int] = [:]
+        for alarm in alarms where alarm.isActive {
+            let armed = AlarmBackupIds.ids(for: alarm.id).filter { scheduledIds.contains($0) }.count
+            counts[alarm.id] = armed
+        }
+        return counts
+    }
+
     func challengeSolved(_ alarm: Alarm) async {
         let backupIds = AlarmBackupIds.ids(for: alarm.id)
         var related = Set(backupIds)
@@ -398,7 +413,7 @@ struct AlarmKitScheduler: AlarmScheduling {
                 countdownDuration: nil,
                 schedule: schedule,
                 attributes: attributes,
-                stopIntent: intent,
+                stopIntent: StopAndChallengeIntent(alarmID: alarm.id),
                 secondaryIntent: intent,
                 sound: sound
             )

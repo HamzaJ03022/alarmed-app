@@ -11,7 +11,6 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    warningCard
                     loudnessTipCard
 
                     alarmEngineCard
@@ -47,28 +46,6 @@ struct SettingsView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Warning (audited copy)
-
-    private var warningCard: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.title3)
-                .foregroundStyle(AppColors.warning)
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Important")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(AppColors.warning)
-                Text("Alarms ring even when the app is closed. Keep notifications enabled — a notification delivers the alarm and opens the wake-up challenge.")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(AppColors.warning.opacity(0.9))
-                    .lineSpacing(2)
-            }
-        }
-        .padding(18)
-        .background(AppColors.warningBackground, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.warning, lineWidth: 1))
     }
 
     /// The lock-screen alarm plays at the system "Ringtone & Alerts" volume,
@@ -164,9 +141,17 @@ struct SettingsView: View {
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(AppColors.textSecondary)
                     }
-                    if let raw = viewModel.rawPermissionState {
-                        Text(raw)
-                            .font(.caption2.weight(.semibold))
+                }
+            }
+
+            // Per-alarm re-ring health: a muted alarm must re-ring within a
+            // minute, so any missing backup count is worth surfacing.
+            if !viewModel.backupDiagnostics.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(viewModel.backupDiagnostics, id: \.self) { line in
+                        Text(line)
+                            .font(.caption.weight(.semibold))
+                            .monospacedDigit()
                             .foregroundStyle(AppColors.textSecondary)
                     }
                 }

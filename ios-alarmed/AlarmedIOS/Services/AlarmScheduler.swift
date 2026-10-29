@@ -41,6 +41,10 @@ protocol AlarmScheduling {
     /// Stops a system alert that is ringing while the in-app challenge is on
     /// screen and already playing the alarm tone itself.
     func silenceSystemAlert(systemId: String) async
+
+    /// Maps each active alarm id to how many of its re-ring backups are
+    /// currently armed, or nil when the scheduler cannot enumerate them.
+    func armedBackupCounts(alarms: [Alarm]) async -> [String: Int]?
 }
 
 extension AlarmScheduling {
@@ -59,6 +63,8 @@ extension AlarmScheduling {
     func challengeSolved(_ alarm: Alarm) async {}
 
     func silenceSystemAlert(systemId: String) async {}
+
+    func armedBackupCounts(alarms: [Alarm]) async -> [String: Int]? { nil }
 }
 
 /// Deterministic IDs for the re-ring backups that follow every alarm. Each

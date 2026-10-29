@@ -35,10 +35,11 @@ struct AlarmedIOSApp: App {
                     if #available(iOS 26.0, *), ringingMonitor == nil {
                         ringingMonitor = AlarmKitScheduler.observeRinging()
                     }
-                    // Launched via the AlarmKit alarm UI (OpenChallengeIntent):
-                    // route straight to the ringing screen with the challenge.
-                    if let pending = UserDefaults.standard.string(forKey: AlarmedPendingAlarm.key) {
-                        UserDefaults.standard.removeObject(forKey: AlarmedPendingAlarm.key)
+                    // Launched via the AlarmKit alarm UI (Done or Challenge
+                    // button): route straight to the ringing screen. Only a
+                    // fresh marker routes — a stale one is a leftover from a
+                    // challenge that already finished, not a ring to replay.
+                    if let pending = AlarmedPendingAlarm.consumeFresh() {
                         viewModel.handleAlarmTriggered(systemId: pending)
                     }
                     try? await Task.sleep(for: .seconds(4))

@@ -31,6 +31,8 @@ final class AlarmsViewModel {
     var alarmGroundTruth: [String] = []
     /// Raw system permission state, when the scheduler exposes it.
     var rawPermissionState: String? = nil
+    /// Per-alarm re-ring backup counts for the Settings diagnostics card.
+    var backupDiagnostics: [String] = []
     /// Status line from the last "Play test sound" tap.
     var testSoundStatus: String? = nil
     var isPlayingTestSound: Bool = false
@@ -130,6 +132,9 @@ final class AlarmsViewModel {
     /// on the quote screen can't leave them armed for tomorrow.
     func challengeSolved(_ alarm: Alarm) {
         let current = alarms.first(where: { $0.id == alarm.id }) ?? alarm
+        // Consume the pending-ring marker immediately: leaving it behind made
+        // the next app launch replay a challenge that was already solved.
+        AlarmedPendingAlarm.clear()
         Task {
             await scheduler.challengeSolved(current)
             if current.repeatDays.isEmpty {
@@ -264,16 +269,33 @@ final class AlarmsViewModel {
         let result = await scheduler.schedule(alarm)
         systemAlarmCount = await scheduler.registeredSystemAlarmCount()
         rawPermissionState = scheduler.rawPermissionStateLine()
+        await refreshBackupDiagnostics()
         alarmScheduleStatus = Self.describe(result, time: alarm.time)
     }
 
     /// Refreshes the Settings card ground truth: installed build, embedded
-    /// resources, raw permission state and registered system alarms.
+    /// resources, raw permission state, registered system alarms, and how many
+    /// re-ring backups are actually armed per active alarm.
     func refreshEngineDiagnostics() {
         Task {
             alarmGroundTruth = scheduler.groundTruthLines()
             rawPermissionState = scheduler.rawPermissionStateLine()
             systemAlarmCount = await scheduler.registeredSystemAlarmCount()
+            await refreshBackupDiagnostics()
+        }
+    }
+
+    /// Recounts the re-ring backups actually armed for each active alarm.
+    private func refreshBackupDiagnostics() async {
+        let currentAlarms = alarms
+        if let counts = await scheduler.armedBackupCounts(alarms: currentAlarms) {
+            backupDiagnostics = currentAlarms.filter(\.isActive).map { alarm in
+                let armed = counts[alarm.id] ?? 0
+                let name = alarm.label.isEmpty ? "Alarm at \(alarm.time)" : alarm.label
+                return "\(name): \(armed) of \(AlarmBackupIds.count) re-ring backups armed"
+            }
+        } else {
+            backupDiagnostics = []
         }
     }
 
@@ -308,6 +330,7 @@ final class AlarmsViewModel {
             systemAlarmCount = await scheduler.registeredSystemAlarmCount()
             rawPermissionState = scheduler.rawPermissionStateLine()
             alarmGroundTruth = scheduler.groundTruthLines()
+            await refreshBackupDiagnostics()
             alarmCheckResult = result
             isRunningCheck = false
         }

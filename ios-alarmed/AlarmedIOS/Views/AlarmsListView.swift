@@ -20,18 +20,14 @@ struct AlarmsListView: View {
                         showCreateAlarm = true
                     }
                 } else {
-                    VStack(spacing: 0) {
-                        WarningBanner()
-
-                        ScrollView {
-                            LazyVStack(spacing: 16) {
-                                ForEach(viewModel.alarms) { alarm in
-                                    AlarmItemView(alarm: alarm)
-                                }
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(viewModel.alarms) { alarm in
+                                AlarmItemView(alarm: alarm)
                             }
-                            .padding(16)
-                            .padding(.bottom, 100)
                         }
+                        .padding(16)
+                        .padding(.bottom, 100)
                     }
                     .overlay(alignment: .bottom) {
                         if let message = viewModel.saveConfirmationMessage {
@@ -90,28 +86,6 @@ struct AlarmsListView: View {
         .overlay(Capsule().stroke(AppColors.success.opacity(0.5), lineWidth: 1))
         .shadow(color: .black.opacity(0.4), radius: 16, y: 6)
         .padding(.bottom, 110)
-    }
-}
-
-private struct WarningBanner: View {
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 18))
-                .foregroundStyle(AppColors.warning)
-            Text("Alarms ring even when the app is closed — keep notifications enabled")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppColors.warning)
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(AppColors.warningBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(AppColors.warning)
-                .frame(height: 1)
-        }
     }
 }
 
