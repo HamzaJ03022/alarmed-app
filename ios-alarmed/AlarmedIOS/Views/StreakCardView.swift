@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StreakCardView: View {
     let streak: Int
+    @ScaledMetric(relativeTo: .largeTitle) private var numberSize: CGFloat = 56
 
     private var message: String {
         switch streak {
@@ -14,33 +15,35 @@ struct StreakCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                Image(systemName: "flame.fill")
-                    .font(.title3)
-                    .foregroundStyle(AppColors.warning)
-                Text("Current Streak")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(AppColors.text)
-            }
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Label("Current streak", systemImage: "flame.fill")
+                .font(AppFont.sectionLabel)
+                .textCase(.uppercase)
+                .tracking(0.7)
+                .foregroundStyle(AppColors.warning)
 
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 Text("\(streak)")
-                    .font(.system(size: 48, weight: .bold))
-                    .foregroundStyle(AppColors.warning)
+                    .font(.system(size: numberSize, weight: .thin, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(AppColors.text)
+                    .contentTransition(.numericText(value: Double(streak)))
                 Text(streak == 1 ? "day" : "days")
-                    .font(.title3)
+                    .font(.title3.weight(.medium))
                     .foregroundStyle(AppColors.textSecondary)
             }
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
 
             Text(message)
-                .font(.subheadline)
+                .font(AppFont.rowDetail)
                 .foregroundStyle(AppColors.textSecondary)
-                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(24)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 6)
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.card, in: RoundedRectangle(cornerRadius: Radius.card + 4, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 

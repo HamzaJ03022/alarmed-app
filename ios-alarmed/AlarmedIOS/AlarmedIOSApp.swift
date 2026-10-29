@@ -51,14 +51,20 @@ struct AlarmedIOSApp: App {
     private func setupTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0.071, green: 0.071, blue: 0.071, alpha: 1)
-        // Brighter inactive tint so unreadable #666666 labels get usable contrast
+        // Matches the near-black canvas (#0A0A0C) with a hairline top edge.
+        appearance.backgroundColor = UIColor(red: 0.039, green: 0.039, blue: 0.047, alpha: 1)
+        appearance.shadowColor = UIColor.white.withAlphaComponent(0.07)
+        // Readable inactive tint (#8E8E93, ~6:1) and the blue accent when selected.
+        let inactive = UIColor(red: 0.557, green: 0.557, blue: 0.576, alpha: 1)
+        let accent = UIColor(red: 0.31, green: 0.514, blue: 1.0, alpha: 1) // #4F83FF
         let item = UITabBarItemAppearance()
-        item.normal.iconColor = UIColor(red: 0.557, green: 0.557, blue: 0.576, alpha: 1) // #8E8E93
-        item.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(red: 0.557, green: 0.557, blue: 0.576, alpha: 1)
-        ]
+        item.normal.iconColor = inactive
+        item.normal.titleTextAttributes = [.foregroundColor: inactive]
+        item.selected.iconColor = accent
+        item.selected.titleTextAttributes = [.foregroundColor: accent]
         appearance.stackedLayoutAppearance = item
+        appearance.inlineLayoutAppearance = item
+        appearance.compactInlineLayoutAppearance = item
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }

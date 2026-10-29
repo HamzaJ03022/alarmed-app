@@ -1,30 +1,49 @@
 import SwiftUI
 
+/// Colour tokens for the Alarmed design system. Every screen reads colour
+/// from here — near-black canvas, charcoal surfaces, one restrained blue
+/// accent, and three readable text steps.
 enum AppColors {
-    static let background = Color(hex: "121212")
-    static let card = Color(hex: "1E1E24")
+    // MARK: Surfaces
+    /// Near-black canvas behind every screen.
+    static let background = Color(hex: "0A0A0C")
+    /// Deep charcoal for cards and grouped sections.
+    static let card = Color(hex: "161619")
+    /// Slightly lighter charcoal for inputs, tiles and selected rows.
+    static let surfaceElevated = Color(hex: "202024")
+    /// Row highlight while a finger is down.
+    static let surfacePressed = Color(hex: "29292E")
+
+    // MARK: Text
     static let text = Color(hex: "FFFFFF")
-    static let textSecondary = Color(hex: "B5B5B5")
+    /// Secondary text — 7:1 on the card surface.
+    static let textSecondary = Color(hex: "A3A3AB")
+    /// Disabled alarms and placeholder copy — still ≥4.5:1 on the card surface.
+    static let inactive = Color(hex: "7E7E87")
 
-    static let primary = Color(hex: "4C7DFE")
+    // MARK: Accent & status
+    /// The single accent: primary actions, selected states, enabled toggles.
+    static let primary = Color(hex: "4F83FF")
+    static let primarySoft = Color(hex: "4F83FF").opacity(0.16)
     static let secondary = Color(hex: "6F5BFF")
-    static let success = Color(hex: "4BB543")
-    static let warning = Color(hex: "FFCC00")
-    static let warningBackground = Color(hex: "FFCC00").opacity(0.1)
-    static let error = Color(hex: "FF3B30")
+    static let success = Color(hex: "34C77B")
+    static let warning = Color(hex: "FFB020")
+    static let warningBackground = Color(hex: "FFB020").opacity(0.12)
+    static let error = Color(hex: "FF453A")
 
-    static let border = Color.white.opacity(0.12)
-    static let inactive = Color(hex: "666666")
-    static let divider = Color.white.opacity(0.08)
+    // MARK: Lines & overlays
+    static let border = Color.white.opacity(0.10)
+    static let divider = Color.white.opacity(0.07)
     static let overlay = Color.black.opacity(0.8)
 
     static let switchTrack = Color.white.opacity(0.1)
-    static let cardShadow = Color.black.opacity(0.25)
+    /// Shadows are retired in the redesign; kept transparent for any legacy use.
+    static let cardShadow = Color.clear
 
-    static let buttonInactive = Color.white.opacity(0.05)
+    static let buttonInactive = Color(hex: "202024")
     static let buttonBorder = Color.white.opacity(0.1)
 
-    static let inputBackground = Color.white.opacity(0.05)
+    static let inputBackground = Color(hex: "202024")
     static let inputBorder = Color.white.opacity(0.1)
 }
 

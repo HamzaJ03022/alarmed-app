@@ -6,25 +6,43 @@ struct SettingsView: View {
     @State private var showClearAlarmsAlert = false
     @State private var showQuotes = false
     @State private var showPrivacyPolicy = false
+    @State private var showEngine = false
+
+    private var health: EngineHealth { EngineHealth(viewModel: viewModel) }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    loudnessTipCard
+                VStack(alignment: .leading, spacing: Spacing.xl) {
+                    if case .warning(let message) = health {
+                        WarningStrip(message: message) { showEngine = true }
+                    }
 
-                    alarmEngineCard
-                    alarmsSoundCard
-                    quotesCard
-                    dataManagementCard
-                    aboutCard
+                    alarmSection
+                    loudSection
+                    engineSection
+                    quotesSection
+                    dataSection
+                    aboutSection
+
+                    Text("Alarmed \(appVersion)")
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColors.inactive)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, Spacing.xs)
                 }
-                .padding(20)
-                .padding(.bottom, 100)
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.xs)
+                .padding(.bottom, Spacing.xxl + Spacing.xl)
             }
+            .scrollIndicators(.hidden)
             .background(AppColors.background)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(isPresented: $showEngine) {
+                EngineDiagnosticsView()
+            }
+            .task { viewModel.refreshEngineDiagnostics() }
             .alert("Clear History", isPresented: $showClearHistoryAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Clear", role: .destructive) { viewModel.clearHistory() }
@@ -48,64 +66,86 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Alarm
+
+    private var alarmSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "Alarm")
+            SectionCard {
+                ActionRow(
+                    icon: "play.fill",
+                    title: viewModel.isPlayingTestSound ? "Stop test sound" : "Play test sound",
+                    subtitle: viewModel.testSoundStatus,
+                    trailingSystemImage: viewModel.isPlayingTestSound ? "stop.circle.fill" : "play.circle.fill"
+                ) {
+                    viewModel.playTestSound()
+                }
+                RowDivider(leadingInset: 58)
+                ToggleRow(
+                    icon: "iphone.radiowaves.left.and.right",
+                    title: "Vibration",
+                    isOn: Binding(
+                        get: { viewModel.vibrationEnabled },
+                        set: { viewModel.vibrationEnabled = $0 }
+                    )
+                )
+                RowDivider(leadingInset: 58)
+                InfoRow(
+                    icon: "speaker.wave.3.fill",
+                    iconTint: AppColors.textSecondary,
+                    title: "Alarm volume: always max",
+                    subtitle: "Locked at full volume until the challenge is solved"
+                )
+            }
+        }
+    }
+
+    // MARK: - Make it loud
+
     /// The lock-screen alarm plays at the system "Ringtone & Alerts" volume,
     /// which no app can raise — this one-time setup makes it loud and stops
     /// the volume buttons from lowering it overnight.
-    private var loudnessTipCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.body)
-                    .foregroundStyle(AppColors.primary)
-                Text("Make your alarm loud")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(AppColors.text)
-                Spacer()
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                tipStep(number: 1, text: "Open Settings → Sounds & Haptics and drag \"Ringtone & Alerts\" all the way up.")
-                tipStep(number: 2, text: "Turn off \"Change with Buttons\" so the volume buttons can't lower your alarm overnight.")
-            }
-
-            Text("Silencing a ringing alarm with the side or volume buttons only pauses it — it rings again every minute until you solve the challenge.")
-                .font(.caption)
-                .foregroundStyle(AppColors.textSecondary)
-                .lineSpacing(2)
-
-            Button(action: openSystemSettings) {
-                HStack(spacing: 8) {
-                    Image(systemName: "gearshape.fill")
-                    Text("Open Settings")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
+    private var loudSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "Make it loud")
+            SectionCard {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    tipStep(number: 1, text: "In Settings → Sounds & Haptics, drag \"Ringtone & Alerts\" all the way up.")
+                    tipStep(number: 2, text: "Turn off \"Change with Buttons\" so the volume buttons can't lower your alarm overnight.")
+                    Text("Silencing a ringing alarm with the side or volume buttons only pauses it — it rings again every minute until you solve the challenge.")
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .font(.caption.weight(.bold))
-                .foregroundStyle(AppColors.primary)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 14)
-                .background(AppColors.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .padding(Spacing.md)
+
+                RowDivider()
+
+                ActionRow(
+                    icon: "gearshape.fill",
+                    title: "Open Settings",
+                    trailingSystemImage: "arrow.up.right",
+                    action: openSystemSettings
+                )
             }
-            .buttonStyle(.plain)
         }
-        .padding(18)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.primary.opacity(0.35), lineWidth: 1))
     }
 
     private func tipStep(number: Int, text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: Spacing.sm) {
             Text("\(number)")
-                .font(.caption.weight(.heavy))
-                .foregroundStyle(AppColors.background)
-                .frame(width: 22, height: 22)
-                .background(AppColors.primary, in: Circle())
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(AppColors.primary)
+                .frame(width: 26, height: 26)
+                .background(AppColors.primarySoft, in: Circle())
+                .accessibilityHidden(true)
             Text(text)
-                .font(.caption.weight(.medium))
+                .font(AppFont.rowDetail)
                 .foregroundStyle(AppColors.text)
-                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Step \(number): \(text)")
     }
 
     private func openSystemSettings() {
@@ -113,283 +153,80 @@ struct SettingsView: View {
         UIApplication.shared.open(url)
     }
 
-    /// Live scheduling diagnostics — surfaces AlarmKit registration results
-    /// that used to fail silently.
-    private var alarmEngineCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "alarm.waves.left.and.right")
-                    .font(.body)
-                    .foregroundStyle(AppColors.primary)
-                Text("Alarm Engine")
-                    .font(.body.weight(.bold))
-                    .foregroundStyle(AppColors.text)
-                Spacer()
-            }
+    // MARK: - Engine (secondary, never hidden)
 
-            if let status = viewModel.alarmScheduleStatus {
-                Text(status)
-                    .font(.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .lineSpacing(2)
-            }
-
-            if !viewModel.alarmGroundTruth.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    ForEach(viewModel.alarmGroundTruth, id: \.self) { line in
-                        Text(line)
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(AppColors.textSecondary)
+    private var engineSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "Reliability")
+            SectionCard {
+                Button {
+                    showEngine = true
+                } label: {
+                    RowContent(
+                        icon: "alarm.waves.left.and.right",
+                        iconTint: health.color,
+                        title: "Alarm Engine",
+                        subtitle: health.summary
+                    ) {
+                        HStack(spacing: Spacing.xs) {
+                            StatusPill(text: health.pillText, color: health.color)
+                            Chevron()
+                        }
                     }
                 }
+                .buttonStyle(RowButtonStyle())
+                .accessibilityLabel("Alarm Engine, \(health.pillText). \(health.summary)")
             }
+        }
+    }
 
-            // Per-alarm re-ring health: a muted alarm must re-ring within a
-            // minute, so any missing backup count is worth surfacing.
-            if !viewModel.backupDiagnostics.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    ForEach(viewModel.backupDiagnostics, id: \.self) { line in
-                        Text(line)
-                            .font(.caption.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
+    // MARK: - Quotes / Data / About
+
+    private var quotesSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "Quotes")
+            SectionCard {
+                NavigationRow(
+                    icon: "quote.bubble.fill",
+                    title: "Motivational Quotes",
+                    value: "\(viewModel.quotes.count)"
+                ) { showQuotes = true }
+            }
+        }
+    }
+
+    private var dataSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "Data")
+            SectionCard {
+                ActionRow(icon: "clock.arrow.circlepath", title: "Clear Alarm History", role: .destructive) {
+                    showClearHistoryAlert = true
+                }
+                RowDivider(leadingInset: 58)
+                ActionRow(icon: "trash", title: "Delete All Alarms", role: .destructive) {
+                    showClearAlarmsAlert = true
                 }
             }
+        }
+    }
 
-            if let count = viewModel.systemAlarmCount {
-                Text("Registered system alarms: \(count) (each alarm + its re-ring backups)")
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(AppColors.textSecondary)
-            }
-
-            Button(action: { viewModel.runAlarmKitCheck() }) {
-                HStack(spacing: 8) {
-                    if viewModel.isRunningCheck {
-                        ProgressView()
-                            .tint(AppColors.primary)
-                        Text("Running check...")
-                    } else {
-                        Image(systemName: "waveform.path.ecg")
-                        Text("Run AlarmKit check")
-                    }
-                    Spacer()
-                }
-                .font(.caption.weight(.bold))
-                .foregroundStyle(AppColors.primary)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 14)
-                .background(AppColors.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isRunningCheck)
-
-            if let check = viewModel.alarmCheckResult {
-                Text(check)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(AppColors.textSecondary)
-                    .lineSpacing(2)
+    private var aboutSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "About")
+            SectionCard {
+                NavigationRow(icon: "questionmark.circle.fill", title: "How to Use", action: showHelp)
+                RowDivider(leadingInset: 58)
+                NavigationRow(icon: "info.circle.fill", title: "About Alarmed", action: showAbout)
+                RowDivider(leadingInset: 58)
+                NavigationRow(icon: "lock.shield.fill", title: "Privacy Policy") { showPrivacyPolicy = true }
             }
         }
-        .padding(18)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
-        .task { viewModel.refreshEngineDiagnostics() }
     }
 
-    // MARK: - Alarms & Sound
-
-    private var alarmsSoundCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            cardTitle("Alarms & Sound")
-
-            // Static information row (no chevron): explains the locked volume
-            HStack(spacing: 14) {
-                rowIcon("speaker.wave.3.fill")
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Alarm volume: always max")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.text)
-                    Text("Locked at full volume until the challenge is solved")
-                        .font(.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-                Spacer()
-            }
-            .padding(.vertical, 12)
-
-            rowDivider
-
-            // Tappable row: plays (or stops) the bundled test tone
-            Button(action: { viewModel.playTestSound() }) {
-                HStack(spacing: 14) {
-                    rowIcon("play.fill")
-                    Text("Play test sound")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.text)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if let status = viewModel.testSoundStatus {
-                Text(status)
-                    .font(.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .lineSpacing(2)
-                    .padding(.bottom, 8)
-            }
-
-            rowDivider
-
-            // Static row with a control: the toggle is the affordance
-            HStack(spacing: 14) {
-                rowIcon("waveform.path")
-                Text("Vibration")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(AppColors.text)
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { viewModel.vibrationEnabled },
-                    set: { viewModel.vibrationEnabled = $0 }
-                ))
-                .tint(AppColors.primary)
-                .labelsHidden()
-            }
-            .padding(.vertical, 12)
-        }
-        .padding(20)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
-    }
-
-    private var quotesCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            cardTitle("Quotes")
-
-            navigationRow(
-                icon: "quote.bubble.fill",
-                title: "Motivational Quotes",
-                subtitle: "\(viewModel.quotes.count) quotes",
-                action: { showQuotes = true }
-            )
-        }
-        .padding(20)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
-    }
-
-    // MARK: - Data & About
-
-    private var dataManagementCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            cardTitle("Data Management")
-
-            destructiveRow(title: "Clear Alarm History", action: { showClearHistoryAlert = true })
-
-            rowDivider
-
-            destructiveRow(title: "Delete All Alarms", action: { showClearAlarmsAlert = true })
-        }
-        .padding(20)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
-    }
-
-    private var aboutCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            cardTitle("About")
-
-            navigationRow(icon: "questionmark.circle", title: "How to Use", subtitle: "", action: showHelp)
-
-            rowDivider
-
-            navigationRow(icon: "info.circle", title: "About Alarmed", subtitle: "", action: showAbout)
-
-            rowDivider
-
-            navigationRow(
-                icon: "lock.shield",
-                title: "Privacy Policy",
-                subtitle: "How Alarmed handles your data",
-                action: { showPrivacyPolicy = true }
-            )
-        }
-        .padding(20)
-        .background(AppColors.card, in: RoundedRectangle(cornerRadius: 24))
-        .shadow(color: AppColors.cardShadow, radius: 20, y: 8)
-    }
-
-    // MARK: - Row building blocks
-
-    private func cardTitle(_ title: String) -> some View {
-        Text(title)
-            .font(.title3.weight(.bold))
-            .foregroundStyle(AppColors.text)
-            .padding(.bottom, 8)
-    }
-
-    private var rowDivider: some View {
-        Rectangle()
-            .fill(AppColors.divider)
-            .frame(height: 1)
-    }
-
-    /// Icon inside a tinted circle — marks every interactive row the same way
-    private func rowIcon(_ systemName: String, tint: Color = AppColors.primary) -> some View {
-        Image(systemName: systemName)
-            .font(.body)
-            .foregroundStyle(tint)
-            .frame(width: 36, height: 36)
-            .background(tint.opacity(0.12), in: Circle())
-    }
-
-    private func navigationRow(icon: String, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                rowIcon(icon)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(AppColors.text)
-                    if !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(AppColors.textSecondary)
-            }
-            .padding(.vertical, 12)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func destructiveRow(title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                rowIcon("trash", tint: AppColors.error)
-                Text(title)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(AppColors.error)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(AppColors.error.opacity(0.6))
-            }
-            .padding(.vertical, 12)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        return build.isEmpty ? version : "\(version) (\(build))"
     }
 
     // MARK: - Alerts
@@ -407,7 +244,7 @@ struct SettingsView: View {
     private func showAbout() {
         let alert = UIAlertController(
             title: "About Alarmed",
-            message: "Alarmed is an app designed to help you wake up on time by requiring you to answer questions before turning off the alarm. Version 1.0.0",
+            message: "Alarmed is an app designed to help you wake up on time by requiring you to answer questions before turning off the alarm. Version \(appVersion)",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -417,7 +254,65 @@ struct SettingsView: View {
     private func presentAlert(_ alert: UIAlertController) {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let root = scene.windows.first?.rootViewController else { return }
-        root.present(alert, animated: true)
+        var top = root
+        while let presented = top.presentedViewController { top = presented }
+        top.present(alert, animated: true)
+    }
+}
+
+// MARK: - Engine health
+
+/// Summarises the engine diagnostics into one status. Derived purely from
+/// the diagnostics the view model already collects — nothing is hidden.
+enum EngineHealth: Equatable {
+    case healthy
+    case idle
+    case warning(String)
+
+    init(viewModel: AlarmsViewModel) {
+        let permission = (viewModel.rawPermissionState ?? "").lowercased()
+        let status = viewModel.alarmScheduleStatus ?? ""
+        let lowerStatus = status.lowercased()
+        let hasActive = viewModel.alarms.contains(where: \.isActive)
+
+        if permission.contains("denied") || lowerStatus.contains("permission: denied") {
+            self = .warning("Alarm permission is off — alarms may not ring. Tap for details.")
+        } else if lowerStatus.contains("could not schedule") || lowerStatus.contains("fallback also failed") {
+            self = .warning("The last alarm couldn't be scheduled. Tap for details.")
+        } else if hasActive && viewModel.alarmsMissingBackups > 0 {
+            let n = viewModel.alarmsMissingBackups
+            self = .warning("\(n) \(n == 1 ? "alarm is" : "alarms are") missing re-ring backups. Tap for details.")
+        } else if lowerStatus.contains("alarmkit unavailable") {
+            self = .warning("Using notification fallback instead of system alarms. Tap for details.")
+        } else if !hasActive {
+            self = .idle
+        } else {
+            self = .healthy
+        }
+    }
+
+    var pillText: String {
+        switch self {
+        case .healthy: "Healthy"
+        case .idle: "Idle"
+        case .warning: "Check"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .healthy: AppColors.success
+        case .idle: AppColors.textSecondary
+        case .warning: AppColors.warning
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .healthy: "All alarms armed with re-ring backups"
+        case .idle: "No alarms are on"
+        case .warning: "Something needs attention"
+        }
     }
 }
 

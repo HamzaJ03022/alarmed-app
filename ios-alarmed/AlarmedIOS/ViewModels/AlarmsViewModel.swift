@@ -33,6 +33,9 @@ final class AlarmsViewModel {
     var rawPermissionState: String? = nil
     /// Per-alarm re-ring backup counts for the Settings diagnostics card.
     var backupDiagnostics: [String] = []
+    /// Active alarms with fewer than the full set of re-ring backups armed
+    /// (drives the Settings engine status pill).
+    var alarmsMissingBackups: Int = 0
     /// Status line from the last "Play test sound" tap.
     var testSoundStatus: String? = nil
     var isPlayingTestSound: Bool = false
@@ -289,6 +292,9 @@ final class AlarmsViewModel {
     private func refreshBackupDiagnostics() async {
         let currentAlarms = alarms
         if let counts = await scheduler.armedBackupCounts(alarms: currentAlarms) {
+            alarmsMissingBackups = currentAlarms.filter(\.isActive).filter {
+                (counts[$0.id] ?? 0) < AlarmBackupIds.count
+            }.count
             backupDiagnostics = currentAlarms.filter(\.isActive).map { alarm in
                 let armed = counts[alarm.id] ?? 0
                 let name = alarm.label.isEmpty ? "Alarm at \(alarm.time)" : alarm.label
@@ -296,6 +302,7 @@ final class AlarmsViewModel {
             }
         } else {
             backupDiagnostics = []
+            alarmsMissingBackups = 0
         }
     }
 

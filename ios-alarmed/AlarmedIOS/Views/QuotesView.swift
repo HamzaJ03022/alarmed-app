@@ -12,22 +12,21 @@ struct QuotesView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 Text("Add your own motivational quotes to see when you wake up. These quotes will be randomly shown after completing your alarm challenges.")
-                    .font(.subheadline)
+                    .font(AppFont.rowDetail)
                     .foregroundStyle(AppColors.textSecondary)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.xs)
+                    .padding(.bottom, Spacing.md)
 
                 inputSection
 
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        Text("Your Quotes (\(viewModel.quotes.count))")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppColors.text)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
+                        SectionHeader(title: "Your quotes · \(viewModel.quotes.count)")
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.sm)
 
                         ForEach(viewModel.quotes.indices, id: \.self) { index in
                             quoteRow(index: index)
@@ -55,9 +54,10 @@ struct QuotesView: View {
     private var inputSection: some View {
         HStack(alignment: .bottom, spacing: 12) {
             TextField("Enter a new motivational quote...", text: $newQuote, axis: .vertical)
-                .padding(16)
-                .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
+                .padding(Spacing.md)
+                .background(AppColors.card, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 .foregroundStyle(AppColors.text)
+                .tint(AppColors.primary)
                 .lineLimit(3...6)
 
             Button(action: addQuote) {
@@ -67,11 +67,13 @@ struct QuotesView: View {
                     .frame(width: 56, height: 56)
                     .background(
                         newQuote.trimmingCharacters(in: .whitespaces).isEmpty
-                            ? AppColors.inactive : AppColors.primary,
+                            ? AppColors.surfaceElevated : AppColors.primary,
                         in: Circle()
                     )
             }
             .disabled(newQuote.trimmingCharacters(in: .whitespaces).isEmpty)
+            .buttonStyle(PressableStyle(scale: 0.92))
+            .accessibilityLabel("Add quote")
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
@@ -97,8 +99,9 @@ struct QuotesView: View {
                             .font(.body.bold())
                             .foregroundStyle(AppColors.text)
                             .frame(width: 40, height: 40)
-                            .background(AppColors.error, in: RoundedRectangle(cornerRadius: 8))
+                            .background(AppColors.surfaceElevated, in: Circle())
                     }
+                    .accessibilityLabel("Cancel editing")
                     Button {
                         if !editText.trimmingCharacters(in: .whitespaces).isEmpty {
                             viewModel.updateQuote(index: index, quote: editText.trimmingCharacters(in: .whitespaces))
@@ -110,14 +113,16 @@ struct QuotesView: View {
                             .font(.body.bold())
                             .foregroundStyle(AppColors.text)
                             .frame(width: 40, height: 40)
-                            .background(AppColors.primary, in: RoundedRectangle(cornerRadius: 8))
+                            .background(AppColors.primary, in: Circle())
                     }
+                    .accessibilityLabel("Save quote")
                 }
             }
-            .padding(16)
-            .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            .padding(Spacing.md)
+            .background(AppColors.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(AppColors.primary.opacity(0.5), lineWidth: 1))
+            .padding(.horizontal, Spacing.md)
+            .padding(.bottom, Spacing.xs)
         } else {
             VStack(spacing: 12) {
                 Text(viewModel.quotes[index])
@@ -135,8 +140,9 @@ struct QuotesView: View {
                         Image(systemName: "pencil")
                             .font(.body)
                             .foregroundStyle(AppColors.primary)
-                            .padding(8)
+                            .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Edit quote")
                     Button {
                         deleteIndex = index
                         showDeleteAlert = true
@@ -144,15 +150,17 @@ struct QuotesView: View {
                         Image(systemName: "trash")
                             .font(.body)
                             .foregroundStyle(AppColors.error)
-                            .padding(8)
+                            .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Delete quote")
                 }
             }
-            .padding(20)
-            .background(AppColors.card, in: RoundedRectangle(cornerRadius: 16))
-            .shadow(color: AppColors.cardShadow, radius: 12, y: 4)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            .padding(.horizontal, Spacing.md)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xxs)
+            .background(AppColors.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .padding(.horizontal, Spacing.md)
+            .padding(.bottom, Spacing.xs)
         }
     }
 

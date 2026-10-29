@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Shared empty state: glowing icon, title, one sentence, one action.
 struct EmptyStateView: View {
     let title: String
     let description: String
@@ -7,47 +8,70 @@ struct EmptyStateView: View {
     let systemImage: String
     let onAction: () -> Void
 
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: systemImage)
-                .font(.system(size: 64))
-                .foregroundStyle(AppColors.primary)
+    @State private var breathe = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-            VStack(spacing: 8) {
+    var body: some View {
+        VStack(spacing: Spacing.xl) {
+            ZStack {
+                Circle()
+                    .fill(AppColors.primary.opacity(0.22))
+                    .frame(width: 150, height: 150)
+                    .blur(radius: 40)
+                    .scaleEffect(breathe ? 1.08 : 0.92)
+                Circle()
+                    .strokeBorder(AppColors.primary.opacity(0.25), lineWidth: 1)
+                    .frame(width: 128, height: 128)
+                Circle()
+                    .fill(AppColors.card)
+                    .frame(width: 104, height: 104)
+                    .overlay(Circle().strokeBorder(AppColors.border, lineWidth: 1))
+                Image(systemName: systemImage)
+                    .font(.system(size: 42, weight: .medium))
+                    .foregroundStyle(AppColors.primary)
+                    .symbolEffect(.bounce, options: .nonRepeating, value: breathe)
+            }
+            .accessibilityHidden(true)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true)) {
+                    breathe = true
+                }
+            }
+
+            VStack(spacing: Spacing.xs) {
                 Text(title)
-                    .font(.title2.weight(.semibold))
+                    .font(.title2.weight(.bold))
                     .foregroundStyle(AppColors.text)
                     .multilineTextAlignment(.center)
                 Text(description)
                     .font(.body)
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.horizontal, Spacing.md)
 
-            Button(action: onAction) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.body.weight(.semibold))
-                    Text(actionText)
-                        .font(.body.weight(.semibold))
-                }
-                .foregroundStyle(AppColors.text)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 16)
-                .background(AppColors.primary, in: RoundedRectangle(cornerRadius: 30))
-                .shadow(color: AppColors.primary.opacity(0.3), radius: 12, y: 6)
+            Button {
+                HapticManager.lightImpact()
+                onAction()
+            } label: {
+                Label(actionText, systemImage: "plus")
             }
+            .buttonStyle(PrimaryButtonStyle())
+            .frame(maxWidth: 320)
         }
-        .padding(24)
+        .padding(Spacing.xl)
+        .frame(maxWidth: .infinity)
     }
 }
 
 #Preview {
     EmptyStateView(
-        title: "No Alarms Set",
-        description: "Create your first alarm to start waking up on time.",
-        actionText: "Create Alarm",
+        title: "Wake up with purpose",
+        description: "Alarmed only stops when you prove you're awake.",
+        actionText: "Create your first alarm",
         systemImage: "alarm.fill"
     ) {}
     .preferredColorScheme(.dark)
