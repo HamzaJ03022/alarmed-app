@@ -19,7 +19,10 @@ struct AlarmRingingView: View {
             AppColors.background.ignoresSafeArea()
 
             if completed {
-                MotivationalQuoteView(quote: selectedQuote) {
+                MotivationalQuoteView(
+                    quote: selectedQuote,
+                    checkInMessage: viewModel.lastCheckInBooking?.message
+                ) {
                     finishAlarm()
                 }
             } else if alarm.dismissalMode == "phrase" {

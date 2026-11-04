@@ -12,6 +12,11 @@ struct AlarmedIOSApp: App {
         CrashGuard.inspectPreviousSession()
         CrashGuard.begin(.launch)
         setupTabBarAppearance()
+        // The notification delegate (and the check-in category with the
+        // lock-screen "I'm awake" action) must exist even when AlarmKit
+        // handles all alarms — the scheduler only touches NotificationManager
+        // on its fallback path.
+        _ = NotificationManager.shared
     }
 
     var body: some Scene {
@@ -29,12 +34,24 @@ struct AlarmedIOSApp: App {
                         viewModel.handleAlarmTriggered(systemId: alarmId)
                     }
                 }
+                .onReceive(
+                    // The check-in notification body was tapped: open the calm
+                    // "Are you awake?" screen (never a silent confirmation).
+                    NotificationCenter.default.publisher(for: .checkInOpened)
+                        .receive(on: DispatchQueue.main)
+                ) { notification in
+                    if let alarmId = notification.userInfo?["alarmId"] as? String {
+                        viewModel.openCheckIn(alarmId: alarmId)
+                    }
+                }
                 .task {
                     // AlarmKit: surface in-app ringing when a system alarm fires
                     // while the app is running.
                     if #available(iOS 26.0, *), ringingMonitor == nil {
                         ringingMonitor = AlarmKitScheduler.observeRinging()
                     }
+                    // Expire stale check-ins and re-verify pending ones.
+                    viewModel.cleanUpCheckInsOnLaunch()
                     // Launched via the AlarmKit alarm UI (Done or Challenge
                     // button): route straight to the ringing screen. Only a
                     // fresh marker routes — a stale one is a leftover from a

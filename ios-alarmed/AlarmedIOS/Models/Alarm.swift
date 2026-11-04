@@ -19,6 +19,11 @@ struct Alarm: Identifiable, Codable, Equatable {
     var dismissPhrase: String
     /// Id of the alarm tone in `AlarmSound` (chosen in the sound picker).
     var sound: String
+    /// Wake-up Check-in: an optional "Are you awake?" follow-up booked only
+    /// after this alarm's challenge is solved.
+    var checkInEnabled: Bool
+    /// Minutes after solving the challenge before the check-in fires.
+    var checkInDelayMinutes: Int
 
     init(
         id: String = UUID().uuidString,
@@ -32,7 +37,9 @@ struct Alarm: Identifiable, Codable, Equatable {
         vibrate: Bool = true,
         dismissalMode: DismissalMode = "questions",
         dismissPhrase: String = "",
-        sound: String = AlarmSound.defaultID
+        sound: String = AlarmSound.defaultID,
+        checkInEnabled: Bool = false,
+        checkInDelayMinutes: Int = 10
     ) {
         self.id = id
         self.time = time
@@ -46,6 +53,8 @@ struct Alarm: Identifiable, Codable, Equatable {
         self.dismissalMode = dismissalMode
         self.dismissPhrase = dismissPhrase
         self.sound = sound
+        self.checkInEnabled = checkInEnabled
+        self.checkInDelayMinutes = checkInDelayMinutes
     }
 
     init(from decoder: Decoder) throws {
@@ -64,5 +73,8 @@ struct Alarm: Identifiable, Codable, Equatable {
         // Alarms saved before the sound picker have no key — they get the
         // default tone instead of failing the whole decode.
         sound = try container.decodeIfPresent(String.self, forKey: .sound) ?? AlarmSound.defaultID
+        // Check-in fields postdate the sound picker — same backward-compat rule.
+        checkInEnabled = try container.decodeIfPresent(Bool.self, forKey: .checkInEnabled) ?? false
+        checkInDelayMinutes = try container.decodeIfPresent(Int.self, forKey: .checkInDelayMinutes) ?? 10
     }
 }

@@ -1,3 +1,4 @@
+import AlarmKit
 import SwiftUI
 
 /// Editable alarm fields shared by Create and Edit. Saving still happens in
@@ -13,6 +14,8 @@ struct AlarmDraft {
     var dismissalMode: String = "questions"
     var dismissPhrase: String = ""
     var sound: String = AlarmSound.defaultID
+    var checkInEnabled: Bool = false
+    var checkInDelayMinutes: Int = 10
 
     static let phraseMinLength = 10
     static let phraseMaxLength = 100
@@ -42,6 +45,8 @@ struct AlarmDraft {
         dismissalMode = alarm.dismissalMode
         dismissPhrase = alarm.dismissPhrase
         sound = alarm.sound
+        checkInEnabled = alarm.checkInEnabled
+        checkInDelayMinutes = alarm.checkInDelayMinutes
     }
 }
 
@@ -73,6 +78,7 @@ struct AlarmEditorForm: View {
                 timeSection
                 alarmSection
                 challengeSection
+                checkInSection
                 soundSection
                 if let onDelete {
                     deleteSection(onDelete)
@@ -235,7 +241,7 @@ struct AlarmEditorForm: View {
                 SelectionTile(
                     icon: "character.cursor.ibeam",
                     title: "Type a Phrase",
-                    subtitle: "Type your own phrase exactly",
+                    subtitle: "Type your own phrase, guided letter by letter",
                     isSelected: draft.dismissalMode == "phrase"
                 ) { selectMode("phrase") }
             }
@@ -381,13 +387,67 @@ struct AlarmEditorForm: View {
                 if phraseTooShort {
                     InlineErrorText(message: "Phrase must be at least \(AlarmDraft.phraseMinLength) characters")
                 } else {
-                    Text("You'll type this exactly (case-sensitive) to stop the alarm.")
+                    Text("You'll type this to stop the alarm — capital letters, extra spaces and curly apostrophes don't have to match.")
                         .font(AppFont.caption)
                         .foregroundStyle(AppColors.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(Spacing.md)
+        }
+    }
+
+    // MARK: - Wake-up check-in
+
+    /// Honest note about what the check-in can do on this device — it never
+    /// dresses notifications up as alarms.
+    private var checkInCapabilityNote: String {
+        if #available(iOS 26.0, *) {
+            if AlarmManager.shared.authorizationState == .denied {
+                return "Alarms permission is off, so check-in reminders are regular notifications: they play a short sound once, stay silent if your phone is on Silent, and may be held back by Focus."
+            }
+            return "If you don't answer within 2 minutes, a follow-up alarm rings — even in Silent mode. With notifications off, that alarm is the check-in itself."
+        }
+        return "This iPhone can't set system alarms for the check-in, so reminders are regular notifications: they play a short sound once, stay silent if your phone is on Silent, and may be held back by Focus."
+    }
+
+    private var checkInSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "After you wake", detail: "A second nudge to keep you up")
+            SectionCard {
+                ToggleRow(
+                    icon: "alarm.wake.up",
+                    title: "Wake-up Check-in",
+                    subtitle: "After you solve your challenge, we check you're still up",
+                    isOn: $draft.checkInEnabled
+                )
+
+                if draft.checkInEnabled {
+                    RowDivider()
+
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("Check in after")
+                            .font(AppFont.rowTitle)
+                            .foregroundStyle(AppColors.text)
+                        SegmentedPicker(
+                            options: [(id: "10", label: "10 min"), (id: "15", label: "15 min")],
+                            selection: Binding(
+                                get: { String(draft.checkInDelayMinutes) },
+                                set: { draft.checkInDelayMinutes = Int($0) ?? 10 }
+                            )
+                        )
+                        .accessibilityLabel("Check-in delay")
+
+                        Text(checkInCapabilityNote)
+                            .font(AppFont.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(Spacing.md)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: draft.checkInEnabled)
         }
     }
 

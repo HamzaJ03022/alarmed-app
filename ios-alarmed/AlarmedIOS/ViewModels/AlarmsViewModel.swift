@@ -41,6 +41,13 @@ final class AlarmsViewModel {
     var isPlayingTestSound: Bool = false
     /// Transient save/update toast shown on the Alarms list. Never persisted.
     var saveConfirmationMessage: String? = nil
+    /// Alarm whose wake-up check-in is on screen ("Are you awake?").
+    var activeCheckInAlarmId: String? = nil
+    /// Honest outcome of the check-in booking, shown on the wake-up quote
+    /// screen right after the challenge is solved.
+    var lastCheckInBooking: CheckInOutcome? = nil
+    /// Wake-up check-in lines for the diagnostics card.
+    var checkInDiagnostics: [String] = []
 
     private let storage = UserDefaults.standard
     private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()
@@ -85,6 +92,14 @@ final class AlarmsViewModel {
         if let dismissalMode = updates.dismissalMode { alarm.dismissalMode = dismissalMode }
         if let dismissPhrase = updates.dismissPhrase { alarm.dismissPhrase = dismissPhrase }
         if let sound = updates.sound { alarm.sound = sound }
+        if let checkInEnabled = updates.checkInEnabled {
+            alarm.checkInEnabled = checkInEnabled
+            // Turning the setting off cancels any check-in still pending.
+            if !checkInEnabled && alarms[index].checkInEnabled {
+                Task { await WakeUpCheckInStore.shared.cancel(for: id) }
+            }
+        }
+        if let checkInDelayMinutes = updates.checkInDelayMinutes { alarm.checkInDelayMinutes = checkInDelayMinutes }
         alarms[index] = alarm
         save()
         // Cancel first, then reschedule, in one ordered task — an unordered
@@ -98,7 +113,10 @@ final class AlarmsViewModel {
     func deleteAlarm(id: String) {
         alarms.removeAll { $0.id == id }
         save()
-        Task { await scheduler.cancel(id: id) }
+        Task {
+            await WakeUpCheckInStore.shared.cancel(for: id)
+            await scheduler.cancel(id: id)
+        }
     }
 
     func toggleAlarm(id: String) {
@@ -109,7 +127,11 @@ final class AlarmsViewModel {
         if alarm.isActive {
             Task { await scheduleAndRecord(alarm) }
         } else {
-            Task { await scheduler.cancel(id: id) }
+            // Switching an alarm off before it rings cancels its check-in too.
+            Task {
+                await WakeUpCheckInStore.shared.cancel(for: id)
+                await scheduler.cancel(id: id)
+            }
         }
     }
 
@@ -123,10 +145,45 @@ final class AlarmsViewModel {
     /// screen plays the tone itself, so the system alert is silenced to avoid
     /// a double alarm — the backups stay armed until the challenge is solved.
     func handleAlarmTriggered(systemId: String) {
+        // A check-in follow-up ring routes to the "Are you awake?" screen,
+        // never back into the challenge.
+        let alarmIds = alarms.map(\.id)
+        if let parentId = AlarmCheckInIds.parentAlarmId(for: systemId, among: alarmIds) {
+            if WakeUpCheckInStore.shared.pendingState(for: parentId) != nil {
+                activeCheckInAlarmId = parentId
+            } else {
+                // Confirmed (or already gone): stop the stale ring, ring nothing.
+                Task { await WakeUpCheckInStore.shared.silenceLeftoverRing(alarmId: parentId) }
+            }
+            return
+        }
+
         guard let parentId = AlarmBackupIds.parentAlarmId(for: systemId, among: alarms) else { return }
         activeAlarmId = parentId
+        // The alarm ringing again clears any leftover check-in from an
+        // earlier occurrence so a stale nudge can never fire mid-challenge.
+        Task { await WakeUpCheckInStore.shared.cancel(for: parentId) }
         if UIApplication.shared.applicationState == .active {
             Task { await scheduler.silenceSystemAlert(systemId: systemId) }
+        }
+    }
+
+    /// The check-in notification was tapped (not confirmed): open the calm
+    /// "Are you awake?" screen when a pending check-in actually exists.
+    func openCheckIn(alarmId: String) {
+        guard WakeUpCheckInStore.shared.pendingState(for: alarmId) != nil,
+              alarms.contains(where: { $0.id == alarmId }) else { return }
+        activeCheckInAlarmId = alarmId
+    }
+
+    /// The big button on the check-in screen — an explicit confirmation, the
+    /// only in-app path that stops and cancels the follow-up rings.
+    func confirmCheckIn() {
+        guard let id = activeCheckInAlarmId else { return }
+        activeCheckInAlarmId = nil
+        Task {
+            await WakeUpCheckInStore.shared.confirm(alarmId: id)
+            await refreshCheckInDiagnostics()
         }
     }
 
@@ -140,6 +197,15 @@ final class AlarmsViewModel {
         AlarmedPendingAlarm.clear()
         Task {
             await scheduler.challengeSolved(current)
+            // The only reliable post-success moment: book the check-in now,
+            // then disarm a one-time alarm. Booking before deactivation keeps
+            // the alarm's own fields intact for the booking.
+            if current.checkInEnabled {
+                lastCheckInBooking = await WakeUpCheckInStore.shared.scheduleCheckIn(for: current)
+                await refreshCheckInDiagnostics()
+            } else {
+                lastCheckInBooking = nil
+            }
             if current.repeatDays.isEmpty {
                 updateAlarm(id: current.id, with: PartialAlarmUpdate(isActive: false))
             }
@@ -183,10 +249,14 @@ final class AlarmsViewModel {
 
     func clearAlarms() {
         let activeAlarms = alarms.filter(\.isActive)
+        let allIds = alarms.map(\.id)
         alarms.removeAll()
         save()
-        // Also unregister the system alarms so nothing keeps ringing.
+        // Also unregister the system alarms and check-ins so nothing keeps ringing.
         Task {
+            for id in allIds {
+                await WakeUpCheckInStore.shared.cancel(for: id)
+            }
             for alarm in activeAlarms {
                 await scheduler.cancel(id: alarm.id)
             }
@@ -285,6 +355,21 @@ final class AlarmsViewModel {
             rawPermissionState = scheduler.rawPermissionStateLine()
             systemAlarmCount = await scheduler.registeredSystemAlarmCount()
             await refreshBackupDiagnostics()
+            await refreshCheckInDiagnostics()
+        }
+    }
+
+    /// Recomputes the check-in diagnostics lines from live system state.
+    func refreshCheckInDiagnostics() async {
+        checkInDiagnostics = await WakeUpCheckInStore.shared.diagnosticLines()
+    }
+
+    /// Launch-time housekeeping: drop check-ins whose last possible ring is
+    /// long past, and re-verify anything still pending.
+    func cleanUpCheckInsOnLaunch() {
+        Task {
+            await WakeUpCheckInStore.shared.cleanUpExpired()
+            await refreshCheckInDiagnostics()
         }
     }
 
@@ -376,4 +461,6 @@ struct PartialAlarmUpdate {
     var dismissalMode: String? = nil
     var dismissPhrase: String? = nil
     var sound: String? = nil
+    var checkInEnabled: Bool? = nil
+    var checkInDelayMinutes: Int? = nil
 }

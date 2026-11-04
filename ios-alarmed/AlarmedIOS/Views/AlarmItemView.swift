@@ -76,12 +76,27 @@ struct AlarmMetaLine: View {
                 repeatView
                 dot
                 ChallengeTag(alarm: alarm, isOn: isOn)
+                if alarm.checkInEnabled { dot; checkInTag(isOn: isOn) }
             }
             VStack(alignment: .leading, spacing: 4) {
                 repeatView
-                ChallengeTag(alarm: alarm, isOn: isOn)
+                HStack(spacing: Spacing.xs) {
+                    ChallengeTag(alarm: alarm, isOn: isOn)
+                    if alarm.checkInEnabled { dot; checkInTag(isOn: isOn) }
+                }
             }
         }
+    }
+
+    private func checkInTag(isOn: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "alarm.wake.up")
+                .font(.caption2.weight(.semibold))
+            Text("Check-in")
+                .font(AppFont.tag)
+        }
+        .foregroundStyle(isOn ? AppColors.textSecondary : AppColors.inactive)
+        .lineLimit(1)
     }
 
     @ViewBuilder
@@ -142,8 +157,9 @@ enum AlarmAccessibility {
         let time = TimeFormatter.formatTime12h(alarm.time)
         let label = alarm.label.isEmpty ? "" : ", \(alarm.label)"
         let repeatText = TimeFormatter.formatRepeatDays(alarm.repeatDays)
+        let checkIn = alarm.checkInEnabled ? ", Wake-up Check-in" : ""
         let state = alarm.isActive ? "On" : "Off"
-        return "\(time)\(label), \(repeatText), \(challengeText(for: alarm)), \(state)"
+        return "\(time)\(label), \(repeatText), \(challengeText(for: alarm))\(checkIn), \(state)"
     }
 }
 

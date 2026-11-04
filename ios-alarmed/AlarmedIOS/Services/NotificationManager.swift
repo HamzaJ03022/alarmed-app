@@ -3,7 +3,31 @@ import UserNotifications
 
 final class NotificationManager: NSObject, @unchecked Sendable {
     static let shared = NotificationManager()
-    private override init() { super.init(); UNUserNotificationCenter.current().delegate = self }
+    private override init() {
+        super.init()
+        UNUserNotificationCenter.current().delegate = self
+        registerCheckInCategory()
+    }
+
+    /// Registers the check-in notification category. The "I'm awake" action is
+    /// created with NO options: no `.foreground` (it runs in the background)
+    /// and no `.authenticationRequired` (it works straight from the lock
+    /// screen, without unlocking). Everything it needs — the alarm id — rides
+    /// inside the notification's userInfo, readable while the phone is locked.
+    private func registerCheckInCategory() {
+        let awakeAction = UNNotificationAction(
+            identifier: CheckInNotification.awakeActionId,
+            title: "I'm awake",
+            options: []
+        )
+        let checkInCategory = UNNotificationCategory(
+            identifier: CheckInNotification.categoryId,
+            actions: [awakeAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([checkInCategory])
+    }
 
     func requestPermission(completion: ((Bool) -> Void)? = nil) {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge, .timeSensitive]) { granted, error in
@@ -96,6 +120,32 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        let userInfo = response.notification.request.content.userInfo
+
+        // Wake-up check-in notifications are routed separately from alarms:
+        // the "I'm awake" action confirms (running here in the background,
+        // without unlocking), tapping the notification body opens the calm
+        // check-in screen — opening the app never confirms on its own.
+        if let alarmId = userInfo[CheckInNotification.userInfoAlarmKey] as? String {
+            if response.actionIdentifier == CheckInNotification.awakeActionId {
+                Task {
+                    // Await the full cancel-exhaustion before completing.
+                    await WakeUpCheckInStore.shared.confirm(alarmId: alarmId)
+                    completionHandler()
+                }
+            } else {
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(
+                        name: .checkInOpened,
+                        object: nil,
+                        userInfo: ["alarmId": alarmId]
+                    )
+                }
+                completionHandler()
+            }
+            return
+        }
+
         // Identifiers are "<uuid>" or "<uuid>-<day>"; the UUID itself
         // contains dashes, so strip only a known weekday suffix.
         var identifier = response.notification.request.identifier
@@ -116,4 +166,5 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
 
 extension Notification.Name {
     static let alarmTriggered = Notification.Name("alarmTriggered")
+    static let checkInOpened = Notification.Name("checkInOpened")
 }

@@ -2,17 +2,29 @@ import SwiftUI
 
 struct MotivationalQuoteView: View {
     let quote: String
+    /// Honest check-in booking result, shown right after solving.
+    var checkInMessage: String? = nil
     let onContinue: () -> Void
 
     var body: some View {
         VStack(spacing: 32) {
             cardQuote
             congratulationText
+            if let checkInMessage {
+                Text(checkInMessage)
+                    .font(.footnote)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
+            }
             continueButton
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppColors.background)
+        .animation(.easeInOut(duration: 0.3), value: checkInMessage)
     }
 
     private var cardQuote: some View {

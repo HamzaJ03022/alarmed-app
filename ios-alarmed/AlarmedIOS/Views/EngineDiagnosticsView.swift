@@ -39,6 +39,22 @@ struct EngineDiagnosticsView: View {
                     }
                 }
 
+                if !viewModel.checkInDiagnostics.isEmpty {
+                    group("Wake-up check-ins") {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            ForEach(viewModel.checkInDiagnostics, id: \.self) { line in
+                                HStack(alignment: .top, spacing: Spacing.xs) {
+                                    Image(systemName: line.contains("confirmed") || line.contains("check-in due")
+                                          ? "checkmark.circle.fill" : "info.circle.fill")
+                                        .font(.footnote)
+                                        .foregroundStyle(AppColors.primary)
+                                    diagnosticText(line)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if !viewModel.alarmGroundTruth.isEmpty {
                     group("Build & permission") {
                         VStack(alignment: .leading, spacing: 6) {

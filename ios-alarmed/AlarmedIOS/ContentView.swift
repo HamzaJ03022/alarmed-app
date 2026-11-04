@@ -34,6 +34,12 @@ struct ContentView: View {
                         .transition(.move(edge: .bottom))
                 }
             }
+
+            if let checkInId = viewModel.activeCheckInAlarmId,
+               let alarm = viewModel.alarms.first(where: { $0.id == checkInId }) {
+                AreYouAwakeView(alarm: alarm)
+                    .transition(.move(edge: .bottom))
+            }
         }
     }
 }

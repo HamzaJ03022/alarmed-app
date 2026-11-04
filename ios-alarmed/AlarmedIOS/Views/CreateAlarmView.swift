@@ -55,7 +55,9 @@ struct CreateAlarmView: View {
             vibrate: draft.vibrate,
             dismissalMode: draft.dismissalMode,
             dismissPhrase: draft.savedPhrase,
-            sound: draft.sound
+            sound: draft.sound,
+            checkInEnabled: draft.checkInEnabled,
+            checkInDelayMinutes: draft.checkInDelayMinutes
         )
         viewModel.addAlarm(alarm)
         viewModel.saveConfirmationMessage =

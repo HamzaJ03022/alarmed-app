@@ -68,7 +68,9 @@ struct EditAlarmView: View {
             vibrate: draft.vibrate,
             dismissalMode: draft.dismissalMode,
             dismissPhrase: draft.savedPhrase,
-            sound: draft.sound
+            sound: draft.sound,
+            checkInEnabled: draft.checkInEnabled,
+            checkInDelayMinutes: draft.checkInDelayMinutes
         ))
         viewModel.saveConfirmationMessage =
             "Alarm updated \u{2022} rings at \(TimeFormatter.formatTime12h(time))"
