@@ -2,11 +2,13 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AlarmsViewModel.self) private var viewModel
+    @Environment(SubscriptionStore.self) private var store
     @State private var showClearHistoryAlert = false
     @State private var showClearAlarmsAlert = false
     @State private var showQuotes = false
     @State private var showPrivacyPolicy = false
     @State private var showEngine = false
+    @State private var showPaywall = false
 
     private var health: EngineHealth { EngineHealth(viewModel: viewModel) }
 
@@ -22,6 +24,7 @@ struct SettingsView: View {
                     loudSection
                     engineSection
                     quotesSection
+                    proSection
                     dataSection
                     aboutSection
 
@@ -62,6 +65,9 @@ struct SettingsView: View {
                 NavigationStack {
                     PrivacyPolicyView()
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(canDismiss: true)
             }
         }
     }
@@ -205,6 +211,33 @@ struct SettingsView: View {
                 RowDivider(leadingInset: 58)
                 ActionRow(icon: "trash", title: "Delete All Alarms", role: .destructive) {
                     showClearAlarmsAlert = true
+                }
+            }
+        }
+    }
+
+    private var proSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "Subscription")
+            SectionCard {
+                NavigationRow(
+                    icon: "crown.fill",
+                    iconTint: store.isPro ? AppColors.warning : AppColors.textSecondary,
+                    title: "Alarmed Pro",
+                    value: store.proStatusLine ?? "Not active"
+                ) {
+                    if store.isPro {
+                        // Active subscribers manage renewal with Apple.
+                        if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                            UIApplication.shared.open(url)
+                        }
+                    } else {
+                        showPaywall = true
+                    }
+                }
+                RowDivider(leadingInset: 58)
+                NavigationRow(icon: "arrow.clockwise.circle.fill", title: "Restore Purchases") {
+                    Task { await store.restore() }
                 }
             }
         }

@@ -53,6 +53,12 @@ final class AlarmsViewModel {
     private let scheduler: AlarmScheduling = AlarmSchedulerFactory.makeScheduler()
     private let soundTester = AlarmSoundTester()
 
+    /// Creating, editing and re-enabling alarms are Pro actions; turning an
+    /// alarm off and deleting it stay free so nobody is trapped by alarms
+    /// that were already scheduled. The paywall gate makes this unreachable
+    /// in the UI — these guards are the backstop.
+    private var isPro: Bool { SubscriptionStore.shared.isPro }
+
     init() {
         load()
         reconcileOnLaunch()
@@ -71,6 +77,7 @@ final class AlarmsViewModel {
     }
 
     func addAlarm(_ alarm: Alarm) {
+        guard isPro else { return }
         var newAlarm = alarm
         newAlarm.id = UUID().uuidString
         alarms.append(newAlarm)
@@ -79,6 +86,7 @@ final class AlarmsViewModel {
     }
 
     func updateAlarm(id: String, with updates: PartialAlarmUpdate) {
+        guard isPro else { return }
         guard let index = alarms.firstIndex(where: { $0.id == id }) else { return }
         var alarm = alarms[index]
         if let time = updates.time { alarm.time = time }
@@ -121,6 +129,8 @@ final class AlarmsViewModel {
 
     func toggleAlarm(id: String) {
         guard let index = alarms.firstIndex(where: { $0.id == id }) else { return }
+        // Turning OFF is always allowed (alarm safety); turning ON needs Pro.
+        guard alarms[index].isActive || isPro else { return }
         alarms[index].isActive.toggle()
         let alarm = alarms[index]
         save()

@@ -4,9 +4,13 @@ import SwiftUI
 @main
 struct AlarmedIOSApp: App {
     @State private var viewModel = AlarmsViewModel()
+    @State private var store = SubscriptionStore.shared
     @State private var ringingMonitor: Task<Void, Never>? = nil
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // RevenueCat must be configured before any UI can ask for Pro state.
+        SubscriptionStore.configureSDK()
         // Notification permission is requested from the onboarding
         // "Enable Alarms" button, never automatically at launch.
         CrashGuard.inspectPreviousSession()
@@ -23,6 +27,7 @@ struct AlarmedIOSApp: App {
         WindowGroup {
             ContentView()
                 .environment(viewModel)
+                .environment(store)
                 .preferredColorScheme(.dark)
                 .onReceive(
                     // Posters (App Intents, notification delegate) may run off
@@ -45,6 +50,8 @@ struct AlarmedIOSApp: App {
                     }
                 }
                 .task {
+                    // Entitlement listener + fresh status check (launch).
+                    store.start()
                     // AlarmKit: surface in-app ringing when a system alarm fires
                     // while the app is running.
                     if #available(iOS 26.0, *), ringingMonitor == nil {
@@ -61,6 +68,13 @@ struct AlarmedIOSApp: App {
                     }
                     try? await Task.sleep(for: .seconds(4))
                     CrashGuard.end(.launch)
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    // Re-check the entitlement when the app returns to the
+                    // foreground (trial expiry, renewal, billing retry…).
+                    if phase == .active {
+                        Task { await store.refresh() }
+                    }
                 }
         }
     }
