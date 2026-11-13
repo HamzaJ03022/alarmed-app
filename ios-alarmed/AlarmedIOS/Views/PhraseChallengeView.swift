@@ -45,6 +45,10 @@ struct PhraseChallengeView: View {
         VStack(spacing: 0) {
             promptSection
             inputSection
+        }
+        // The button lives in the bottom safe-area inset so it always sits
+        // ABOVE the keyboard instead of sliding behind it.
+        .safeAreaInset(edge: .bottom) {
             snoozeButton
         }
         .onAppear { isFocused = true }
@@ -104,6 +108,11 @@ struct PhraseChallengeView: View {
                 .lineSpacing(6)
                 .foregroundColor(.clear)
                 .tint(.clear)
+                // Clear styling alone still leaks the field's own copy of the
+                // text on device (doubled, offset letters over the guide) —
+                // near-zero opacity hides it for good. The field keeps focus,
+                // so the keyboard still appears.
+                .opacity(0.01)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .scrollContentBackground(.hidden)
@@ -201,7 +210,7 @@ struct PhraseChallengeView: View {
                 .shadow(color: AppColors.error.opacity(0.3), radius: 12, y: 6)
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 32)
+        .padding(.vertical, 8)
         .disabled(solved)
     }
 
