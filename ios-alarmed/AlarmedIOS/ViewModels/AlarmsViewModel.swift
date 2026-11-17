@@ -137,9 +137,13 @@ final class AlarmsViewModel {
         if alarm.isActive {
             Task { await scheduleAndRecord(alarm) }
         } else {
-            // Switching an alarm off before it rings cancels its check-in too.
+            // Turning the alarm off cancels only its own system registration.
+            // A check-in that is already booked SURVIVES: it was earned by
+            // solving the challenge after a real wake-up, and switching the
+            // alarm off afterwards must not silently take it back. Before a
+            // ring there is no check-in to lose anyway — bookings only ever
+            // happen inside challengeSolved.
             Task {
-                await WakeUpCheckInStore.shared.cancel(for: id)
                 await scheduler.cancel(id: id)
             }
         }
