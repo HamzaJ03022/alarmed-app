@@ -3,6 +3,8 @@ import SwiftUI
 struct AlarmsListView: View {
     @Environment(AlarmsViewModel.self) private var viewModel
     @State private var showCreateAlarm = false
+    /// Alarm waiting on the "Delete alarm?" confirmation after a swipe.
+    @State private var pendingDelete: Alarm?
 
     var body: some View {
         NavigationStack {
@@ -68,6 +70,26 @@ struct AlarmsListView: View {
             .sheet(isPresented: $showCreateAlarm) {
                 CreateAlarmView()
             }
+            .confirmationDialog(
+                "Delete alarm?",
+                isPresented: Binding(
+                    get: { pendingDelete != nil },
+                    set: { if !$0 { pendingDelete = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: pendingDelete
+            ) { alarm in
+                Button("Delete", role: .destructive) {
+                    HapticManager.mediumImpact()
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                        viewModel.deleteAlarm(id: alarm.id)
+                    }
+                    pendingDelete = nil
+                }
+                Button("Cancel", role: .cancel) { pendingDelete = nil }
+            } message: { alarm in
+                Text("The \(TimeFormatter.formatTime12h(alarm.time)) alarm will stop ringing and be removed.")
+            }
         }
     }
 
@@ -77,32 +99,50 @@ struct AlarmsListView: View {
         let next = nextAlarm(now: now)
         let others = sortedAlarms.filter { $0.id != next?.alarm.id }
 
-        return ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.xl) {
+        // A plain List (styled to look like the cards) so rows get native
+        // swipe actions. Only the rows below the hero are swipeable.
+        return List {
+            Group {
                 if let next {
                     NextAlarmHero(alarm: next.alarm, fireDate: next.date, now: now)
                 } else {
                     NoAlarmsOnHero()
                 }
+            }
+            .listRowInsets(EdgeInsets(top: Spacing.xs, leading: Spacing.md, bottom: Spacing.lg, trailing: Spacing.md))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
 
-                if !others.isEmpty {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        SectionHeader(title: next == nil ? "Your alarms" : "Other alarms")
-                        LazyVStack(spacing: 10) {
-                            ForEach(others) { alarm in
-                                AlarmItemView(alarm: alarm)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            if !others.isEmpty {
+                SectionHeader(title: next == nil ? "Your alarms" : "Other alarms")
+                    .listRowInsets(EdgeInsets(top: Spacing.xs, leading: Spacing.md, bottom: Spacing.xxs, trailing: Spacing.md))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                ForEach(others) { alarm in
+                    AlarmItemView(alarm: alarm)
+                        .listRowInsets(EdgeInsets(top: 5, leading: Spacing.md, bottom: 5, trailing: Spacing.md))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            // No destructive role: the row must stay put until
+                            // the confirmation is answered.
+                            Button {
+                                HapticManager.lightImpact()
+                                pendingDelete = alarm
+                            } label: {
+                                Label("Delete", systemImage: "trash.fill")
                             }
+                            .tint(AppColors.error)
                         }
-                    }
                 }
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.top, Spacing.xs)
-            .padding(.bottom, Spacing.xxl + Spacing.xxl)
-            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.alarms)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
+        .contentMargins(.bottom, Spacing.xxl + Spacing.xxl, for: .scrollContent)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.alarms)
     }
 
     /// Alarms ordered by clock time, enabled first.
