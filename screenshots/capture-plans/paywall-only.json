@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "platform": "ios",
+  "scrollDirection": "page",
+  "screenshotScenario": "app-store",
+  "screenshotPrompts": [
+    {
+      "label": "Paywall",
+      "screenDescription": "Paywall: Existing alarms, Alarmed Pro, Wake up, or the alarm won't stop., Challenges that make sure you're really up, Wake-up check-in — \"are you awake?\" nudges, System alarms with automatic backups",
+      "requiredLabels": [
+        "Existing alarms",
+        "Alarmed Pro",
+        "Wake up, or the alarm won't stop.",
+        "Challenges that make sure you're really up",
+        "Wake-up check-in — \"are you awake?\" nudges",
+        "System alarms with automatic backups"
+      ],
+      "prompt": "Paywall",
+      "screenshotTarget": "paywall"
+    }
+  ]
+}
