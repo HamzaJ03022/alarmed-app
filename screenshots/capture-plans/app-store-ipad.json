@@ -1,0 +1,175 @@
+{
+  "version": 2,
+  "platform": "ios",
+  "scrollDirection": "page",
+  "screenshotScenario": "app-store",
+  "screenshotPrompts": [
+    {
+      "label": "Alarms",
+      "screenDescription": "Alarms: Alarms, Next alarm, NEXT ALARM, OTHER ALARMS",
+      "requiredLabels": [
+        "Alarms",
+        "Next alarm",
+        "NEXT ALARM",
+        "OTHER ALARMS"
+      ],
+      "prompt": "Alarms"
+    },
+    {
+      "label": "Create",
+      "screenDescription": "Create: Cancel, New Alarm, Alarm time, ALARM, Clear label, Alarm label",
+      "requiredLabels": [
+        "Cancel",
+        "New Alarm",
+        "Alarm time",
+        "ALARM",
+        "Clear label",
+        "Alarm label"
+      ],
+      "prompt": "Create",
+      "setup": [
+        {
+          "action": "tap",
+          "label": "Add alarm",
+          "accessibilityId": "plus",
+          "type": "Button"
+        },
+        {
+          "action": "set_value",
+          "label": "Alarm label",
+          "type": "TextField",
+          "text": "Morning run"
+        },
+        {
+          "action": "tap",
+          "label": "done",
+          "accessibilityId": "Done",
+          "type": "Button"
+        },
+        {
+          "action": "scroll",
+          "direction": "down"
+        },
+        {
+          "action": "tap",
+          "label": "Monday",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "Tuesday",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "Wednesday",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "Thursday",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "Friday",
+          "type": "Button"
+        }
+      ]
+    },
+    {
+      "label": "Phrase",
+      "screenDescription": "Phrase: Alarms, Next alarm, NEXT ALARM, Gym before work, Volume locked at max until solved, Type your phrase to dismiss",
+      "requiredLabels": [
+        "Alarms",
+        "Next alarm",
+        "NEXT ALARM",
+        "Gym before work",
+        "Volume locked at max until solved",
+        "Type your phrase to dismiss"
+      ],
+      "prompt": "Phrase",
+      "setup": [
+        {
+          "action": "tap",
+          "label": "i",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "space",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "a",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "m",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "space",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "a",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "w",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "a",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "k",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "e",
+          "type": "Button"
+        }
+      ],
+      "screenshotTarget": "phrase"
+    },
+    {
+      "label": "CheckIn",
+      "screenDescription": "CheckIn: Alarms, Next alarm, NEXT ALARM, OTHER ALARMS, Brightness Higher, Are you awake?",
+      "requiredLabels": [
+        "Alarms",
+        "Next alarm",
+        "NEXT ALARM",
+        "OTHER ALARMS",
+        "Brightness Higher",
+        "Are you awake?"
+      ],
+      "prompt": "CheckIn",
+      "screenshotTarget": "check-in"
+    },
+    {
+      "label": "Paywall",
+      "screenDescription": "Paywall: Alarmed Pro, Wake up, or the alarm won't stop., Challenges that make sure you're really up, Wake-up check-in — \"are you awake?\" nudges, System alarms with automatic backups, Subscribe, Annual",
+      "requiredLabels": [
+        "Alarmed Pro",
+        "Wake up, or the alarm won't stop.",
+        "Challenges that make sure you're really up",
+        "Wake-up check-in — \"are you awake?\" nudges",
+        "System alarms with automatic backups",
+        "Subscribe, Annual"
+      ],
+      "prompt": "Paywall",
+      "screenshotTarget": "paywall"
+    }
+  ]
+}

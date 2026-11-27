@@ -123,7 +123,7 @@ struct PaywallView: View {
                         PlanCard(
                             plan: plan,
                             isSelected: isSelected(plan),
-                            isTrialEligible: store.isTrialEligible(plan.package)
+                            trialLength: store.isTrialEligible(plan.package) ? store.trialLength(plan.package) : nil
                         ) {
                             HapticManager.lightImpact()
                             selectedPackage = plan.package
@@ -239,7 +239,10 @@ struct PaywallView: View {
 
     private var ctaLabel: String {
         guard let plan = selectedPlan else { return "Subscribe" }
-        return store.isTrialEligible(plan.package) ? "Start 7 days free" : "Subscribe"
+        if store.isTrialEligible(plan.package), let trial = store.trialLength(plan.package) {
+            return "Start \(trial) free"
+        }
+        return "Subscribe"
     }
 
     /// Honest, per-plan terms. Only promises a trial when RevenueCat says this
@@ -251,8 +254,8 @@ struct PaywallView: View {
             }
             let price = plan.package.storeProduct.localizedPriceString
             let period = plan.periodNoun
-            if store.isTrialEligible(plan.package) {
-                return "7 days free, then \(price) every \(period). Auto-renews until cancelled. Cancel at least 24 hours before renewal in Settings › Apple Account › Subscriptions."
+            if store.isTrialEligible(plan.package), let trial = store.trialLength(plan.package) {
+                return "\(trial) free, then \(price) every \(period). Auto-renews until cancelled. Cancel at least 24 hours before renewal in Settings › Apple Account › Subscriptions."
             }
             return "\(price) every \(period), billed automatically until cancelled. Cancel anytime in Settings › Apple Account › Subscriptions."
         }()
@@ -387,7 +390,7 @@ struct PaywallView: View {
 private struct PlanCard: View {
     let plan: PaywallView.PlanCardModel
     let isSelected: Bool
-    let isTrialEligible: Bool
+    let trialLength: String?
     let action: () -> Void
 
     var body: some View {
@@ -402,8 +405,8 @@ private struct PlanCard: View {
                         Text(plan.planTitle)
                             .font(.headline)
                             .foregroundStyle(AppColors.text)
-                        if isTrialEligible {
-                            Text("7 days free")
+                        if let trialLength {
+                            Text("\(trialLength) free")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(AppColors.primary)
                                 .padding(.horizontal, 8)
@@ -439,7 +442,7 @@ private struct PlanCard: View {
         }
         .buttonStyle(PressableStyle(scale: 0.99))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(plan.planTitle), \(plan.priceLine)\(plan.badge.map { ", \($0)" } ?? "")\(isTrialEligible ? ", 7 days free trial" : "")")
+        .accessibilityLabel("\(plan.planTitle), \(plan.priceLine)\(plan.badge.map { ", \($0)" } ?? "")\(trialLength.map { ", \($0) free trial" } ?? "")")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

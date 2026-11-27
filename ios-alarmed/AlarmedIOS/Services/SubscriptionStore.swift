@@ -86,6 +86,15 @@ final class SubscriptionStore {
         Task { await loadOfferings() }
     }
 
+    #if DEBUG && targetEnvironment(simulator)
+    /// App Store screenshot scenario only: show a resolved state without the
+    /// live entitlement listener.
+    func applyScreenshotState(isPro: Bool) {
+        self.isPro = isPro
+        hasResolved = true
+    }
+    #endif
+
     // MARK: - Status checks
 
     /// Fresh entitlement check: launch, foreground, restore, purchase.
@@ -161,7 +170,25 @@ final class SubscriptionStore {
     /// the CTA label and the honest terms line — a non-eligible user never
     /// sees the words "free trial".
     func isTrialEligible(_ package: Package) -> Bool {
-        introEligibility[package.identifier] == true
+        introEligibility[package.identifier] == true && trialLength(package) != nil
+    }
+
+    /// The free-trial length exactly as configured in App Store Connect,
+    /// e.g. "3 days" or "1 week". Nil when the product has no free trial.
+    func trialLength(_ package: Package) -> String? {
+        guard let intro = package.storeProduct.introductoryDiscount,
+              intro.paymentMode == .freeTrial else { return nil }
+        let total = intro.subscriptionPeriod.value * max(intro.numberOfPeriods, 1)
+        guard total > 0 else { return nil }
+        let unit: String
+        switch intro.subscriptionPeriod.unit {
+        case .day: unit = "day"
+        case .week: unit = "week"
+        case .month: unit = "month"
+        case .year: unit = "year"
+        @unknown default: return nil
+        }
+        return "\(total) \(unit)\(total == 1 ? "" : "s")"
     }
 
     // MARK: - Purchase & restore

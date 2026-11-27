@@ -7,6 +7,9 @@ struct AlarmRingingView: View {
     @State private var questions: [Question] = []
     @State private var currentQuestionIndex = 0
     @State private var correctAnswers = 0
+    /// Bumped for every question served so the card always resets, even when
+    /// a reshuffle repeats the previous question.
+    @State private var questionsServed = 0
     @State private var snoozeCount = 0
     @State private var completed = false
     @State private var selectedQuote = ""
@@ -103,6 +106,7 @@ struct AlarmRingingView: View {
                     timeLimit: timeLimit,
                     onAnswer: handleAnswer
                 )
+                .id(questionsServed)
                 .padding(.horizontal, 16)
                 .padding(.top, 24)
             } else {
@@ -178,12 +182,28 @@ struct AlarmRingingView: View {
             HapticManager.errorNotification()
         }
         currentQuestionIndex += 1
+        questionsServed += 1
+        // Small banks (e.g. Hard + one topic) can run out before the target
+        // is reached. Reshuffle and keep going so the score is never lost and
+        // the alarm is always solvable.
+        if currentQuestionIndex >= questions.count && alarm.dismissalMode == "questions" {
+            let refill = QuestionBank.getRandomQuestions(
+                count: 50,
+                difficulty: alarm.questionDifficulty,
+                categories: alarm.questionCategories
+            )
+            if !refill.isEmpty {
+                questions = refill
+                currentQuestionIndex = 0
+            }
+        }
     }
 
     private func handleSnooze() {
         snoozeCount += 1
         currentQuestionIndex = 0
         correctAnswers = 0
+        questionsServed += 1
         if alarm.dismissalMode == "questions" {
             questions = QuestionBank.getRandomQuestions(
                 count: 50,

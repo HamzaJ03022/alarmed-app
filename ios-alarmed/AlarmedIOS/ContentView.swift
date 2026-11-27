@@ -50,6 +50,10 @@ struct ContentView: View {
                 AreYouAwakeView(alarm: alarm)
                     .transition(.move(edge: .bottom))
             }
+
+            #if DEBUG && targetEnvironment(simulator)
+            ScreenshotReadyMarker()
+            #endif
         }
         .animation(.spring(duration: 0.35), value: store.isPro)
     }

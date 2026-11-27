@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap');
+html, body { margin:0; padding:0; background:#0A0A0C; }
+.canvas {
+  position:relative; width:1284px; height:2778px; overflow:hidden;
+  background:#0A0A0C;
+}
+.bg {
+  position:absolute; inset:0;
+  background-image:url('../../backgrounds/iphone-alarms.png');
+  background-size:cover; background-position:center bottom;
+}
+.bg-shade {
+  position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse 70% 18% at 50% 11%, rgba(10,10,12,0.55) 0%, rgba(10,10,12,0) 100%),
+    linear-gradient(180deg, rgba(10,10,12,0.6) 0%, rgba(10,10,12,0.15) 26%, rgba(10,10,12,0) 45%);
+}
+.headline {
+  font-family:'Inter', sans-serif;
+  font-weight:800;
+  font-size:136px;
+  line-height:1.04;
+  letter-spacing:-0.035em;
+  color:#FFFFFF;
+  margin:0;
+  text-shadow:0 4px 30px rgba(0,0,0,0.6), 0 0 60px rgba(79,131,255,0.22);
+}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="bg"></div>
+  <div class="bg-shade"></div>
+
+  <div style="position:absolute; top:0%; left:50%; width:84%; height:22%; transform:translateX(-50%); display:flex; align-items:center; justify-content:center; text-align:center;">
+    <h1 class="headline">No More<br>Snoozing</h1>
+  </div>
+
+  <div style="position:absolute; left:50%; top:22%; width:78%; transform:translateX(-50%);">
+    <div style="position:relative; aspect-ratio:879/1832;">
+      <div style="position:absolute; overflow:hidden; left:4.32%; top:2.29%; width:91.47%; height:95.41%; border-radius:7.5% / 3.5%;">
+        <img src="../../captures/iphone/01-alarms.png" style="display:block; width:100%; height:100%; object-fit:cover; object-position:top;" draggable="false" />
+      </div>
+      <img src="https://r2-pub.rork.com/static/iphone-mockups/iphone-17-pro-deep-blue.png" style="position:relative; z-index:10; display:block; width:100%; height:100%; pointer-events:none;" draggable="false" />
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,135 @@
+{
+  "appContext": {
+    "appName": "Alarmed",
+    "category": "Productivity",
+    "summary": "An alarm clock you can't snooze your way out of. Each alarm rings until you prove you're awake: type a phrase you chose, or answer quick math and trivia questions. The volume stays locked at max until you solve it, and an optional wake-up check-in asks 'Are you awake?' a few minutes later, ringing again if you went back to sleep. Alarms are real system alarms with automatic backups. Alarmed Pro is a weekly, monthly or yearly subscription. Audience: heavy sleepers, students with early lectures, gym-goers. Style: dark night-sky, near-black #0A0A0C canvas with a single confident electric blue accent #4F83FF, bold short headlines, calm and premium, no clutter."
+  },
+  "devices": {
+    "iphone": {
+      "theme": {
+        "style": "A deep pre-dawn night sky on a near-black #0A0A0C canvas, lit by a single confident electric blue (#4F83FF) glow like the first cold light before sunrise. The mood is calm, quiet and premium, with soft volumetric haze, faint star dust, smooth glassy gradients and subtle film grain. Backgrounds stay restrained, with one luminous blue focal element per slide and the upper area left dark and open for bold white headlines.",
+        "headlineFont": "font-family: 'Inter', sans-serif; weight 800; @import url('https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap');",
+        "headlineFontSize": 136,
+        "mockupIds": {
+          "iphone": "deep-blue",
+          "ipad": "space-gray"
+        },
+        "palette": {
+          "primary": "#0A0A0C",
+          "secondary": "#1A2340",
+          "accent": "#4F83FF"
+        },
+        "layoutId": "hero-clipped"
+      },
+      "slides": [
+        {
+          "label": "Alarms",
+          "capture": "screenshots/captures/iphone/01-alarms.png",
+          "prompt": "Alarms",
+          "backgroundPrompt": "Cinematic abstract night-sky scene on a near-black #0A0A0C base with a vast soft horizon arc of electric blue #4F83FF light rising from the bottom edge, fading into deep midnight navy #1A2340 haze. Faint scattered star dust and gentle volumetric glow from below, with fine film grain and depth-of-field softness at the edges, and the upper 30% calm and almost pure black. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-alarms.png"
+        },
+        {
+          "label": "Create",
+          "capture": "screenshots/captures/iphone/02-create.png",
+          "prompt": "Create",
+          "backgroundPrompt": "Abstract digital art of layered translucent frosted-glass planes floating at gentle angles over a near-black #0A0A0C void, each edge catching a thin line of electric blue #4F83FF rim light from the lower right. Deep midnight navy #1A2340 shadows sit between the layers, with soft bokeh specks and subtle grain, and the top region fades to calm darkness. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-create.png"
+        },
+        {
+          "label": "Phrase",
+          "capture": "screenshots/captures/iphone/03-phrase.png",
+          "prompt": "Phrase",
+          "backgroundPrompt": "Abstract scene of flowing silk-like ribbons of electric blue #4F83FF light sweeping diagonally from the lower left across a near-black #0A0A0C canvas, softening into midnight navy #1A2340 mist. Dramatic side lighting creates luminous highlights along the ribbon folds, with faint particles drifting upward, and the upper 30% left dark and uncluttered. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-phrase.png"
+        },
+        {
+          "label": "CheckIn",
+          "capture": "screenshots/captures/iphone/04-checkin.png",
+          "prompt": "CheckIn",
+          "backgroundPrompt": "Minimal cosmic composition of a single large soft orb of electric blue #4F83FF light glowing from the right edge of a near-black #0A0A0C sky. Concentric faint halos ripple outward into midnight navy #1A2340, with tiny cool-white stars scattered sparsely, gentle volumetric haze and fine grain, and a calm, deep, dark top area. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-checkin.png"
+        },
+        {
+          "label": "Paywall",
+          "capture": "screenshots/captures/iphone/05-paywall.png",
+          "prompt": "Paywall",
+          "backgroundPrompt": "Premium abstract dawn-like scene with a luminous electric blue #4F83FF aurora curtain rising from the bottom center of a near-black #0A0A0C sky, edged with thin silvery-white highlights. Midnight navy #1A2340 gradients blend upward into darkness, with soft volumetric light rays and subtle shimmering particles, and the upper 30% serene and dark. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-paywall.png"
+        }
+      ],
+      "headlines": {
+        "en": {
+          "Alarms": "No More<br>Snoozing",
+          "Create": "Set It<br>Your Way",
+          "Phrase": "Prove<br>You're Up",
+          "CheckIn": "No Going<br>Back to Bed",
+          "Paywall": "Never<br>Oversleep"
+        }
+      }
+    },
+    "ipad": {
+      "theme": {
+        "style": "A calm, premium pre-dawn night sky on a near-black #0A0A0C canvas with deep midnight navy depth. A single confident electric blue (#4F83FF) light source appears in each frame as a horizon glow, thin luminous arc, or soft halo, like the first signal of morning. Textures are fine starfield grain, soft atmospheric haze and smooth gradients. The upper third stays dark and quiet for bold white headlines. The mood is minimal and uncluttered: still, focused and wide awake.",
+        "headlineFont": "font-family: 'Inter', sans-serif; weight 800, tight letter-spacing -0.02em; @import url('https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap');",
+        "headlineFontSize": 140,
+        "mockupIds": {
+          "iphone": "deep-blue",
+          "ipad": "space-gray"
+        },
+        "palette": {
+          "primary": "#0A0A0C",
+          "secondary": "#141A2E",
+          "accent": "#4F83FF"
+        },
+        "layoutId": "hero-clipped"
+      },
+      "slides": [
+        {
+          "label": "Alarms",
+          "capture": "screenshots/captures/ipad/01-alarms.png",
+          "prompt": "Alarms",
+          "backgroundPrompt": "Cinematic abstract night-sky scene on a near-black #0A0A0C base, with a thin curved horizon line of electric blue #4F83FF light glowing across the lower third and a faint midnight navy haze rising above it. Sparse tiny pale stars and fine grain texture spread across the frame, soft volumetric glow from below, with the upper 30% deep black and calm. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/ipad-alarms.png"
+        },
+        {
+          "label": "Create",
+          "capture": "screenshots/captures/ipad/02-create.png",
+          "prompt": "Create",
+          "backgroundPrompt": "Abstract digital art of a single large soft sphere of electric blue #4F83FF light bleeding in from the bottom-right corner, fading through deep midnight navy #141A2E into near-black #0A0A0C. Subtle drifting atmospheric haze, gentle diagonal light falloff and fine film grain give it depth, with the top region open and dark. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/ipad-create.png"
+        },
+        {
+          "label": "Phrase",
+          "capture": "screenshots/captures/ipad/03-phrase.png",
+          "prompt": "Phrase",
+          "backgroundPrompt": "Layered translucent planes of dark smoked glass floating at gentle angles over a near-black #0A0A0C void, each edge catching a hair-thin line of electric blue #4F83FF rim light from the left. Deep midnight navy shadows sit between the layers, with a soft depth-of-field blur on the outer edges and the upper portion fading to pure black. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/ipad-phrase.png"
+        },
+        {
+          "label": "CheckIn",
+          "capture": "screenshots/captures/ipad/04-checkin.png",
+          "prompt": "CheckIn",
+          "backgroundPrompt": "Wide pre-dawn abstract skyscape with soft concentric ripples of faint electric blue #4F83FF light expanding outward from the lower center across a deep midnight navy #141A2E and near-black #0A0A0C field. A delicate scattered starfield, a gentle aurora-like haze and soft diffused lighting from below sit beneath a calm, dark upper third. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/ipad-checkin.png"
+        },
+        {
+          "label": "Paywall",
+          "capture": "screenshots/captures/ipad/05-paywall.png",
+          "prompt": "Paywall",
+          "backgroundPrompt": "Premium abstract composition of sweeping luminous arcs of electric blue #4F83FF and cool silver light curving upward from the bottom-left across a near-black #0A0A0C canvas. Fine glowing particles drift through deep midnight navy #141A2E shadows, with dramatic rim lighting, subtle grain and the top area kept dark and uncluttered. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/ipad-paywall.png"
+        }
+      ],
+      "headlines": {
+        "en": {
+          "Alarms": "No More<br>Snoozing",
+          "Create": "Set It<br>in Seconds",
+          "Phrase": "Prove<br>You're Up",
+          "CheckIn": "Still<br>Awake",
+          "Paywall": "Go Pro"
+        }
+      }
+    }
+  }
+}

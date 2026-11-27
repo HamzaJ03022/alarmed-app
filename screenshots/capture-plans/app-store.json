@@ -1,0 +1,160 @@
+{
+  "version": 2,
+  "platform": "ios",
+  "scrollDirection": "page",
+  "screenshotScenario": "app-store",
+  "screenshotPrompts": [
+    {
+      "label": "Alarms",
+      "screenDescription": "Alarms: Add alarm, Alarms, Next alarm, NEXT ALARM, OTHER ALARMS, History",
+      "requiredLabels": [
+        "Add alarm",
+        "Alarms",
+        "Next alarm",
+        "NEXT ALARM",
+        "OTHER ALARMS",
+        "History"
+      ],
+      "prompt": "Alarms",
+      "screenshotTarget": "alarms"
+    },
+    {
+      "label": "Create",
+      "screenDescription": "Create: Cancel, New Alarm, Alarm time, ALARM, Clear label, Alarm label",
+      "requiredLabels": [
+        "Cancel",
+        "New Alarm",
+        "Alarm time",
+        "ALARM",
+        "Clear label",
+        "Alarm label"
+      ],
+      "prompt": "Create",
+      "setup": [
+        {
+          "action": "tap",
+          "label": "Add alarm",
+          "accessibilityId": "plus",
+          "type": "Button"
+        },
+        {
+          "action": "press_key",
+          "key": "enter"
+        },
+        {
+          "action": "set_value",
+          "label": "Alarm label",
+          "type": "TextField",
+          "text": "Morning run"
+        },
+        {
+          "action": "tap",
+          "label": "done",
+          "accessibilityId": "Done",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "Weekdays",
+          "type": "Button"
+        }
+      ]
+    },
+    {
+      "label": "Phrase",
+      "screenDescription": "Phrase: Add alarm, Alarms, Next alarm, NEXT ALARM, Gym before work, Volume locked at max until solved",
+      "requiredLabels": [
+        "Add alarm",
+        "Alarms",
+        "Next alarm",
+        "NEXT ALARM",
+        "Gym before work",
+        "Volume locked at max until solved"
+      ],
+      "prompt": "Phrase",
+      "setup": [
+        {
+          "action": "tap",
+          "label": "i",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "space",
+          "accessibilityId": "space",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "a",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "m",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "space",
+          "accessibilityId": "space",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "a",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "w",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "a",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "k",
+          "type": "Button"
+        },
+        {
+          "action": "tap",
+          "label": "e",
+          "type": "Button"
+        }
+      ],
+      "screenshotTarget": "phrase"
+    },
+    {
+      "label": "CheckIn",
+      "screenDescription": "CheckIn: Add alarm, Alarms, Next alarm, NEXT ALARM, Brightness Higher, Are you awake?",
+      "requiredLabels": [
+        "Add alarm",
+        "Alarms",
+        "Next alarm",
+        "NEXT ALARM",
+        "Brightness Higher",
+        "Are you awake?"
+      ],
+      "prompt": "CheckIn",
+      "screenshotTarget": "check-in"
+    },
+    {
+      "label": "Paywall",
+      "screenDescription": "Paywall: Existing alarms, Alarmed Pro, Wake up, or the alarm won't stop., Challenges that make sure you're really up, Wake-up check-in — \"are you awake?\" nudges, System alarms with automatic backups",
+      "requiredLabels": [
+        "Existing alarms",
+        "Alarmed Pro",
+        "Wake up, or the alarm won't stop.",
+        "Challenges that make sure you're really up",
+        "Wake-up check-in — \"are you awake?\" nudges",
+        "System alarms with automatic backups"
+      ],
+      "prompt": "Paywall",
+      "screenshotTarget": "paywall"
+    }
+  ]
+}

@@ -50,6 +50,11 @@ struct AlarmedIOSApp: App {
                     }
                 }
                 .task {
+                    #if DEBUG && targetEnvironment(simulator)
+                    if ScreenshotMode.apply(viewModel: viewModel, store: store) {
+                        return
+                    }
+                    #endif
                     // Entitlement listener + fresh status check (launch).
                     store.start()
                     // AlarmKit: surface in-app ringing when a system alarm fires
@@ -72,6 +77,9 @@ struct AlarmedIOSApp: App {
                 .onChange(of: scenePhase) { _, phase in
                     // Re-check the entitlement when the app returns to the
                     // foreground (trial expiry, renewal, billing retry…).
+                    #if DEBUG && targetEnvironment(simulator)
+                    if ScreenshotMode.isAppStore { return }
+                    #endif
                     if phase == .active {
                         Task { await store.refresh() }
                     }
